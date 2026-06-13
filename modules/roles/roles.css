@@ -1,0 +1,299 @@
+/* roles.css */
+
+.roles-dashboard {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 1200px;
+  min-height: calc(100vh - 80px);
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 30px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.roles-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 20px;
+  margin-bottom: 25px;
+}
+
+.roles-header-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.roles-header-title h2 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.roles-layout {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 30px;
+}
+
+@media (max-width: 992px) {
+  .roles-layout {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .roles-dashboard {
+    padding: 16px;
+    min-height: auto;
+  }
+
+  .roles-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+  }
+
+  .roles-header-title h2 {
+    font-size: 1.4rem;
+  }
+
+  .roles-section {
+    padding: 16px;
+  }
+
+  .permissions-select-grid {
+    grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+  }
+}
+
+.roles-section {
+  background: hsla(230, 25%, 6%, 0.3);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  height: 100%;
+}
+
+.roles-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+/* Custom scrollbar */
+.roles-list-container::-webkit-scrollbar {
+  width: 6px;
+}
+.roles-list-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+.roles-list-container::-webkit-scrollbar-thumb {
+  background: hsla(230, 100%, 80%, 0.1);
+  border-radius: 3px;
+}
+.roles-list-container::-webkit-scrollbar-thumb:hover {
+  background: hsla(230, 100%, 80%, 0.2);
+}
+
+.role-card {
+  background: hsla(230, 25%, 10%, 0.5);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: var(--transition-smooth);
+}
+
+.role-card:hover {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 15px var(--accent-glow);
+  transform: translateY(-2px);
+}
+
+.role-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.role-name-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.role-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-smooth);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon:hover {
+  background: hsla(230, 25%, 20%, 0.5);
+  color: var(--text-primary);
+}
+
+.btn-icon.delete:hover {
+  background: hsla(350, 80%, 55%, 0.2);
+  color: var(--error);
+}
+
+.permissions-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.permission-tag {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: hsla(217, 100%, 61%, 0.12);
+  color: hsl(217, 100%, 75%);
+  border: 1px solid hsla(217, 100%, 61%, 0.2);
+}
+
+.form-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+}
+
+.permissions-select-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+  max-height: 250px;
+  overflow-y: auto;
+  padding: 5px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: hsla(230, 25%, 4%, 0.35);
+}
+
+/* Custom scrollbar for grid */
+.permissions-select-grid::-webkit-scrollbar {
+  width: 6px;
+}
+.permissions-select-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+.permissions-select-grid::-webkit-scrollbar-thumb {
+  background: hsla(230, 100%, 80%, 0.1);
+  border-radius: 3px;
+}
+
+.permission-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  background: hsla(230, 25%, 8%, 0.4);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  user-select: none;
+}
+
+.permission-checkbox-label:hover {
+  background: hsla(230, 25%, 15%, 0.6);
+}
+
+.permission-checkbox-label input {
+  accent-color: var(--accent-color);
+  width: 16px;
+  height: 16px;
+}
+
+.permission-checkbox-text {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.permission-checkbox-label input:checked + .permission-checkbox-text {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.no-roles-fallback {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-muted);
+}
+
+/* Soft-deleted roles styling */
+.role-card.deleted {
+  opacity: 0.65;
+  border: 1px dashed hsla(350, 80%, 60%, 0.45);
+  background: hsla(230, 25%, 7%, 0.4);
+}
+
+.role-card.deleted:hover {
+  border-color: var(--error);
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
+  transform: none;
+}
+
+.deleted-role-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  background: hsla(350, 80%, 55%, 0.15);
+  color: hsl(350, 80%, 75%);
+  border: 1px solid hsla(350, 80%, 55%, 0.3);
+  margin-left: 8px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.role-delete-info {
+  font-size: 0.75rem;
+  color: hsl(35, 100%, 70%);
+  font-style: italic;
+  margin-top: 2px;
+}
+
+.btn-icon.restore:hover {
+  background: hsla(150, 80%, 55%, 0.2);
+  color: var(--success);
+}

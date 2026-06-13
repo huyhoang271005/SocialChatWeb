@@ -1,0 +1,214 @@
+/* Left Navigation Sidebar styles */
+
+.app-layout {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1000;
+  display: flex;
+  background-color: var(--bg-primary);
+  font-family: var(--font-family);
+  overflow: hidden;
+}
+
+/* Sidebar navigation rail */
+.nav-sidebar {
+  width: 75px;
+  height: 100%;
+  background-color: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 0;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1002;
+}
+
+/* Logo icon at top */
+.nav-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--accent-gradient);
+  color: white;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 15px var(--accent-glow);
+  flex-shrink: 0;
+}
+
+/* Nav Menu Items */
+.nav-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  align-items: center;
+  flex: 1;
+}
+
+.nav-item {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--text-muted);
+  transition: var(--transition-smooth);
+  position: relative;
+  cursor: pointer;
+  background: transparent;
+  text-decoration: none;
+}
+
+.nav-item:hover {
+  color: var(--text-primary);
+  background-color: hsla(230, 25%, 20%, 0.45);
+  transform: scale(1.05);
+}
+
+.nav-item.active {
+  color: white;
+  background: var(--accent-gradient);
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+/* Left Indicator bar on active */
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: -13px;
+  top: 12px;
+  width: 4px;
+  height: 24px;
+  border-radius: 0 4px 4px 0;
+  background-color: var(--accent-color);
+  box-shadow: 0 0 8px var(--accent-color);
+}
+
+/* Footer Section */
+.nav-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-top: auto;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.nav-logout-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.nav-logout-btn:hover {
+  color: var(--error);
+  background-color: rgba(239, 68, 68, 0.1);
+  transform: scale(1.05);
+}
+
+/* Main Content Mounting Panel */
+.main-content-panel {
+  flex: 1;
+  height: 100%;
+  overflow-y: auto;
+  padding: 30px;
+  background: transparent;
+  position: relative;
+  z-index: 1001;
+}
+
+/* Custom Scrollbar for the main content area */
+.main-content-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.main-content-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.main-content-panel::-webkit-scrollbar-thumb {
+  background: hsla(230, 25%, 20%, 0.4);
+  border-radius: var(--radius-full);
+}
+
+.main-content-panel::-webkit-scrollbar-thumb:hover {
+  background: hsla(230, 25%, 35%, 0.6);
+}
+
+@media (max-width: 768px) {
+  .app-layout {
+    flex-direction: column-reverse;
+  }
+
+  .nav-sidebar {
+    width: 100%;
+    height: 60px;
+    border-right: none;
+    border-top: 1px solid var(--border-color);
+    flex-direction: row;
+    padding: 0 10px;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .nav-logo {
+    display: none;
+  }
+
+  .nav-menu {
+    flex-direction: row;
+    gap: 0;
+    width: auto;
+    flex: 1;
+    justify-content: space-around;
+  }
+
+  .nav-item {
+    width: 44px;
+    height: 44px;
+  }
+
+  .nav-item.active::before {
+    left: 12px;
+    top: -20px; /* Shift to the top edge of the bottom bar */
+    width: 20px;
+    height: 3px;
+    border-radius: 0 0 3px 3px;
+  }
+
+  .nav-footer {
+    flex-direction: row;
+    margin-top: 0;
+    width: auto;
+    padding-left: 10px;
+    border-left: 1px solid var(--border-color);
+  }
+
+  .nav-logout-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .main-content-panel {
+    padding: 16px;
+    height: calc(100% - 60px);
+  }
+}

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="70a16e7e-4c5f-4335-91a1-c3a4263fefce" name="Changes" comment="" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 5,
+  &quot;fromUser&quot;: false
+}</component>
+  <component name="ProjectId" id="3E5djWIsvJLsw04TD6EXT7MdkIR" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Node.js.login.js.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "git-widget-placeholder": "master",
+    "ignore.virus.scanning.warn.message": "true",
+    "javascript.preferred.runtime.type.id": "node",
+    "last_opened_file_path": "C:/code/ChatApp",
+    "node.js.detected.package.eslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-9b0f141eb926-JavaScript-WS-253.32098.39" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="70a16e7e-4c5f-4335-91a1-c3a4263fefce" name="Changes" comment="" />
+      <created>1779472500142</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1779472500142</updated>
+      <workItem from="1779472501206" duration="7541000" />
+      <workItem from="1779511821775" duration="6615000" />
+      <workItem from="1779563474275" duration="3910000" />
+      <workItem from="1779598040964" duration="12660000" />
+      <workItem from="1779707652435" duration="1568000" />
+      <workItem from="1779768223142" duration="600000" />
+      <workItem from="1779796455727" duration="4454000" />
+      <workItem from="1779852628154" duration="7105000" />
+      <workItem from="1779875564232" duration="3115000" />
+      <workItem from="1779903151142" duration="7656000" />
+      <workItem from="1780020352906" duration="10195000" />
+      <workItem from="1780215942799" duration="2398000" />
+      <workItem from="1780369011672" duration="1265000" />
+      <workItem from="1780413691174" duration="4655000" />
+      <workItem from="1781319624662" duration="4342000" />
+      <workItem from="1781340514074" duration="686000" />
+      <workItem from="1781346012816" duration="12342000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+</project>
