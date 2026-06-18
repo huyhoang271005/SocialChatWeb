@@ -92,13 +92,14 @@ export const LoginView = {
         loading.classList.add('active');
         const loadingText = loading.querySelector('.loading-text');
         const originalText = loadingText ? loadingText.textContent : 'Đang kết nối...';
-        
+
         try {
           if (loadingText) loadingText.textContent = 'Đang kết nối Google...';
-          
+
           // 1. Đăng nhập Google qua Firebase
           const loginResult = await loginWithGoogle();
           const firebaseToken = loginResult.firebaseToken;
+          sessionStorage.setItem('chat_firebase_token', firebaseToken);
           const userEmail = loginResult.user.email || '';
 
           // 2. Lấy FCM Token (nếu hỗ trợ và đã bật thông báo)
@@ -108,6 +109,10 @@ export const LoginView = {
           // 3. Gửi thông tin lên Backend để đăng nhập
           if (loadingText) loadingText.textContent = 'Xác thực tài khoản...';
           const response = await api.post('auth/login/oauth2', { firebaseToken, fcmToken });
+
+          if (response.success && response.data?.firebaseToken) {
+            sessionStorage.setItem('chat_firebase_token', response.data.firebaseToken);
+          }
 
           if (!response.success) {
             loading.classList.remove('active');
@@ -123,14 +128,14 @@ export const LoginView = {
           const responseEmail = response.data?.emailName || response.data?.email || userEmail;
 
           // 4. Kiểm tra xác thực email
-          if (response.data && response.data.verifiedEmail === false){
+          if (response.data && response.data.verifiedEmail === false) {
             loading.classList.remove('active');
             if (loadingText) loadingText.textContent = originalText;
             const confirmed = await showDialog({
               title: "Xác thực email",
               message: "Email của bạn chưa được xác thực. Vui lòng xác thực để tiếp tục.",
               type: 'warning',
-              buttons: [{text: "Xác thực ngay", type: 'primary', value: true}]
+              buttons: [{ text: "Xác thực ngay", type: 'primary', value: true }]
             });
             if (confirmed) {
               loading.classList.add('active');
@@ -148,14 +153,14 @@ export const LoginView = {
           }
 
           // 5. Kiểm tra xác thực thiết bị
-          if(response.data && response.data.verifiedDevice === false){
+          if (response.data && response.data.verifiedDevice === false) {
             loading.classList.remove('active');
             if (loadingText) loadingText.textContent = originalText;
             const confirmed = await showDialog({
               title: "Xác thực thiết bị",
               message: "Thiết bị của bạn chưa được xác thực. Vui lòng xác thực để tiếp tục.",
               type: 'warning',
-              buttons: [{text: "Xác thực ngay", type: 'primary', value: true}]
+              buttons: [{ text: "Xác thực ngay", type: 'primary', value: true }]
             });
             if (confirmed) {
               loading.classList.add('active');
@@ -189,7 +194,7 @@ export const LoginView = {
 
             if (confirmed) {
               let register_start_step;
-              if(response.data.hasProfile === false) register_start_step = '2';
+              if (response.data.hasProfile === false) register_start_step = '2';
               else if (response.data.updateProfile === false) register_start_step = '3';
               sessionStorage.setItem('register_start_step', register_start_step);
               sessionStorage.setItem('register_email', responseEmail);
@@ -201,6 +206,9 @@ export const LoginView = {
             return;
           }
 
+          if (response.data && response.data.userId) {
+            localStorage.setItem('chat_user_id', response.data.userId);
+          }
           localStorage.setItem('chat_user_email', responseEmail);
           localStorage.setItem('chat_profile_completed', 'true');
 
@@ -231,7 +239,7 @@ export const LoginView = {
 
     forgotPwLink.addEventListener('click', async (e) => {
       e.preventDefault();
-      
+
       const currentEmail = document.getElementById('login-email').value.trim();
 
       const result = await showDialog({
@@ -272,7 +280,7 @@ export const LoginView = {
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      
+
       const email = document.getElementById('login-email').value.trim();
       const password = document.getElementById('login-password').value;
       const rememberMe = document.getElementById('login-remember').checked;
@@ -288,6 +296,10 @@ export const LoginView = {
       const response = await api.post('auth/login', { emailName: email, password, fcmToken });
       if (loadingText) loadingText.textContent = originalText;
 
+      if (response.success && response.data?.firebaseToken) {
+        sessionStorage.setItem('chat_firebase_token', response.data.firebaseToken);
+      }
+
       if (!response.success) {
         loading.classList.remove('active');
         await showDialog({
@@ -298,13 +310,13 @@ export const LoginView = {
         return;
       }
 
-      if (response.data && response.data.verifiedEmail === false){
+      if (response.data && response.data.verifiedEmail === false) {
         loading.classList.remove('active');
         const confirmed = await showDialog({
           title: "Xác thực email",
           message: "Email của bạn chưa được xác thực. Vui lòng xác thực để tiêp tục.",
           type: 'warning',
-          buttons: [{text: "Xác thực ngay", type: 'primary', value: true}]
+          buttons: [{ text: "Xác thực ngay", type: 'primary', value: true }]
         });
         if (confirmed) {
           loading.classList.add('active');
@@ -321,13 +333,13 @@ export const LoginView = {
         return;
       }
 
-      if(response.data && response.data.verifiedDevice === false){
+      if (response.data && response.data.verifiedDevice === false) {
         loading.classList.remove('active');
         const confirmed = await showDialog({
           title: "Xác thực thiết bị",
           message: "Thiết bị của bạn chưa được xác thực. Vui lòng xác thực để tiếp tục.",
           type: 'warning',
-          buttons: [{text: "Xác thực ngay", type: 'primary', value: true}]
+          buttons: [{ text: "Xác thực ngay", type: 'primary', value: true }]
         });
         if (confirmed) {
           loading.classList.add('active');
@@ -362,7 +374,7 @@ export const LoginView = {
 
         if (confirmed) {
           let register_start_step;
-          if(response.data.hasProfile === false) register_start_step = '2';
+          if (response.data.hasProfile === false) register_start_step = '2';
           else if (response.data.updateProfile === false) register_start_step = '3';
           sessionStorage.setItem('register_start_step', register_start_step);
           sessionStorage.setItem('register_email', email);
@@ -374,6 +386,9 @@ export const LoginView = {
         return;
       }
 
+      if (response.data && response.data.userId) {
+        localStorage.setItem('chat_user_id', response.data.userId);
+      }
       localStorage.setItem('chat_user_email', email);
       localStorage.setItem('chat_profile_completed', 'true');
 

@@ -236,6 +236,16 @@
   border-top-color: var(--text-secondary);
 }
 
+/* Failed State for Messages */
+.message-failed {
+  opacity: 0.9;
+  border: 1px solid #ef4444 !important;
+  background-color: rgba(239, 68, 68, 0.08) !important;
+  background-image: none !important;
+  color: #ef4444 !important;
+}
+
+
 /* Back Button for mobile */
 .btn-icon-back {
   display: none;
@@ -438,4 +448,583 @@
     gap: 8px !important;
     padding: 12px 15px !important;
   }
+}
+
+/* Staged Files Styles */
+.staged-files-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px;
+  background-color: hsla(230, 25%, 6%, 0.45);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--border-color);
+  max-height: 150px;
+  overflow-y: auto;
+  margin-bottom: 5px;
+  width: 100%;
+}
+
+.staged-file-card {
+  position: relative;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background-color: hsla(230, 25%, 12%, 0.85);
+  overflow: visible; /* to show delete button overlapping */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-smooth);
+}
+
+.staged-file-card:hover {
+  border-color: var(--accent-color);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+}
+
+.staged-file-card.square-card {
+  width: 70px;
+  height: 70px;
+}
+
+.staged-file-card.wide-card {
+  width: 200px;
+  height: 70px;
+  padding: 10px;
+  gap: 10px;
+  justify-content: flex-start;
+}
+
+.staged-file-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
+
+.staged-file-video-badge {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  background: rgba(0, 0, 0, 0.65);
+  border-radius: var(--radius-sm);
+  padding: 2px 4px;
+  font-size: 10px;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  pointer-events: none;
+}
+
+.staged-file-info {
+  flex: 1;
+  min-width: 0; /* allows text truncation */
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.staged-file-name {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.staged-file-size {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.staged-file-icon {
+  color: var(--accent-color);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.staged-file-delete {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: hsla(230, 25%, 15%, 0.95);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 5;
+  transition: var(--transition-smooth);
+}
+
+.staged-file-delete:hover {
+  background-color: var(--error);
+  color: white;
+  border-color: var(--error);
+  transform: scale(1.15);
+}
+
+/* Voice Recording Styles */
+.voice-recording-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--radius-md);
+  color: #ef4444;
+  font-weight: 600;
+  font-size: 0.9rem;
+  width: 100%;
+  box-sizing: border-box;
+  animation: pulse-border 1.5s infinite alternate;
+}
+
+.voice-recording-dot {
+  width: 10px;
+  height: 10px;
+  background-color: #ef4444;
+  border-radius: 50%;
+  display: inline-block;
+  animation: pulse-dot 1s infinite alternate;
+}
+
+@keyframes pulse-dot {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  100% { transform: scale(1.25); opacity: 1; }
+}
+
+@keyframes pulse-border {
+  0% { border-color: rgba(239, 68, 68, 0.15); }
+  100% { border-color: rgba(239, 68, 68, 0.45); }
+}
+
+/* Message options dropdown and items */
+.message-options-dropdown {
+  position: relative;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.message-bubble-wrapper:hover .message-options-dropdown {
+  opacity: 1;
+}
+
+.btn-message-options {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  padding: 0;
+}
+
+.btn-message-options:hover {
+  background-color: hsla(230, 25%, 20%, 0.5);
+  color: var(--text-primary);
+}
+
+.message-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 100;
+  min-width: 120px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+  padding: 4px;
+  margin-top: 4px;
+  backdrop-filter: blur(12px);
+  animation: slide-down-fade-menu 0.15s ease-out;
+}
+
+.message-dropdown-menu .dropdown-item {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.2s ease, color 0.2s ease;
+  text-align: left;
+}
+
+.message-dropdown-menu .dropdown-item:hover {
+  background-color: hsla(230, 25%, 20%, 0.4);
+  color: var(--text-primary);
+}
+
+.message-dropdown-menu .dropdown-item.btn-revoke-message:hover {
+  background-color: hsla(350, 80%, 55%, 0.15);
+}
+
+@keyframes slide-down-fade-menu {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Conversation list item options dropdown */
+.btn-convo-options {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  transition: background-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+  padding: 0;
+  opacity: 0;
+}
+
+.conversation-item:hover .btn-convo-options,
+.conversation-item.active .btn-convo-options {
+  opacity: 0.7;
+}
+
+.conversation-item .btn-convo-options:hover {
+  opacity: 1;
+  background-color: hsla(230, 25%, 20%, 0.5);
+  color: var(--text-primary);
+}
+
+.convo-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 100;
+  min-width: 140px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+  padding: 4px;
+  margin-top: 4px;
+  backdrop-filter: blur(12px);
+  animation: slide-down-fade-menu 0.15s ease-out;
+}
+
+.convo-dropdown-menu .dropdown-item {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.2s ease, color 0.2s ease;
+  text-align: left;
+}
+
+.convo-dropdown-menu .dropdown-item:hover {
+  background-color: hsla(230, 25%, 20%, 0.4);
+  color: var(--text-primary);
+}
+
+.convo-dropdown-menu .dropdown-item.btn-delete-convo:hover {
+  background-color: hsla(350, 80%, 55%, 0.15);
+}
+
+/* Chat Header options dropdown styling */
+.chat-header-actions {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.btn-chat-options {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  padding: 0;
+}
+
+.btn-chat-options:hover {
+  background-color: hsla(230, 25%, 20%, 0.5);
+  color: var(--text-primary);
+}
+
+.chat-options-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 100;
+  min-width: 170px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+  padding: 4px;
+  margin-top: 6px;
+  backdrop-filter: blur(12px);
+  animation: slide-down-fade-menu 0.15s ease-out;
+}
+
+.chat-options-dropdown .dropdown-item {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.2s ease, color 0.2s ease;
+  text-align: left;
+}
+
+.chat-options-dropdown .dropdown-item:hover {
+  background-color: hsla(230, 25%, 20%, 0.4);
+  color: var(--text-primary);
+}
+
+/* Custom premium modals styling */
+.chat-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.chat-modal-overlay.active {
+  opacity: 1;
+}
+
+.chat-modal-card {
+  width: 90%;
+  max-width: 460px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+  overflow: hidden;
+  transform: scale(0.95);
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  backdrop-filter: blur(16px);
+}
+
+.chat-modal-overlay.active .chat-modal-card {
+  transform: scale(1);
+}
+
+.chat-modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.chat-modal-header h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.btn-close-modal {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.btn-close-modal:hover {
+  background-color: hsla(230, 25%, 20%, 0.4);
+  color: var(--text-primary);
+}
+
+.chat-modal-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chat-modal-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* User Card and Checkbox inside Modals */
+.users-list-wrapper .user-list-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: hsla(230, 25%, 6%, 0.3);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.users-list-wrapper .user-list-card:hover {
+  transform: translateX(4px);
+  border-color: hsla(230, 100%, 80%, 0.12);
+  background: hsla(230, 25%, 8%, 0.5);
+}
+
+.users-list-wrapper .user-list-card.active {
+  background: hsla(217, 100%, 61%, 0.08);
+  border-color: var(--accent-color);
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.1);
+}
+
+.users-list-wrapper .user-list-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  background-color: var(--bg-secondary);
+  border: 1.5px solid var(--bg-secondary);
+}
+
+.users-list-wrapper .user-list-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow: hidden;
+}
+
+.users-list-wrapper .user-list-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.users-list-wrapper .user-list-username {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.user-list-checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-right: 4px;
+}
+
+.user-checkbox {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--border-color);
+  cursor: pointer;
+  accent-color: var(--accent-color);
+}
+
+.btn-delete-member:hover {
+  color: var(--error) !important;
+  background: rgba(239, 68, 68, 0.15);
+}
+
+/* Group Member Role Badges */
+.role-badge {
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+}
+
+.role-badge.role-creator {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.role-badge.role-admin {
+  background: rgba(99, 102, 241, 0.12);
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+.role-badge.role-member {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
 }

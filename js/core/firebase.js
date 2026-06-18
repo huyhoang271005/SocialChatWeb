@@ -110,3 +110,34 @@ export async function initForegroundNotificationListener(onMessageCallback) {
   }
 }
 
+/**
+ * Lấy Firebase ID Token hiện tại nếu người dùng đang đăng nhập
+ * @returns {Promise<string|null>}
+ */
+export function getCurrentFirebaseToken() {
+  return new Promise((resolve) => {
+    if (!auth) {
+      resolve(null);
+      return;
+    }
+    if (auth.currentUser) {
+      auth.currentUser.getIdToken()
+        .then(token => resolve(token))
+        .catch(() => resolve(null));
+      return;
+    }
+    // Lắng nghe sự thay đổi trạng thái để lấy token ngay khi Firebase Auth load xong
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      unsubscribe();
+      if (user) {
+        user.getIdToken()
+          .then(token => resolve(token))
+          .catch(() => resolve(null));
+      } else {
+        resolve(null);
+      }
+    });
+  });
+}
+
+

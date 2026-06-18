@@ -14,6 +14,8 @@ class WebSocketManager {
     this.url = null;
     this.activeSubscriptions = new Set(); // Lưu danh sách conversationId dạng chuỗi
     this.subscriptionsMap = new Map(); // Lưu đối tượng subscription của STOMP: conversationId -> STOMP subscription
+    this.onConnectCallback = null;
+    this.onDisconnectCallback = null;
   }
 
   // Tương thích ngược với code cũ kiểm tra socket.ws.readyState trong home.js
@@ -94,14 +96,25 @@ class WebSocketManager {
       this.reconnectAttempts = 0;
       this.isConnecting = false;
 
+      // Clear old subscription cache before resubscribing on the new connection
+      this.subscriptionsMap.clear();
+
       // Đăng ký lại các topic đã subscribe trước đó khi kết nối lại
       const subscriptionsToRestore = Array.from(this.activeSubscriptions);
       this.activeSubscriptions.clear(); // Xóa tạm thời để gọi lại subscribe() không bị trùng lặp
 
       subscriptionsToRestore.forEach(subKey => {
         const [topicName, id] = subKey.split(':');
-        this.subscribe(id, topicName);
+        this.subscribe(id);
       });
+
+      if (this.onConnectCallback) {
+        try {
+          this.onConnectCallback();
+        } catch (e) {
+          console.warn('Error in websocket onConnectCallback:', e);
+        }
+      }
     };
 
     this.client.onStompError = async (frame) => {
@@ -120,6 +133,14 @@ class WebSocketManager {
 
     this.client.onWebSocketClose = () => {
       this.isConnecting = false;
+      this.subscriptionsMap.clear();
+      if (this.onDisconnectCallback) {
+        try {
+          this.onDisconnectCallback();
+        } catch (e) {
+          console.warn('Error in websocket onDisconnectCallback:', e);
+        }
+      }
     };
 
     this.client.activate();
@@ -172,8 +193,78 @@ class WebSocketManager {
         destination: '/app/chat.send', // Thay đổi path này theo cấu hình backend của bạn
         body: JSON.stringify(payload)
       });
-    } else {
+    }
+  }
 
+  sendTyping(conversationId) {
+    if (this.client && this.client.connected) {
+      this.client.publish({
+        destination: '/app/chat.typing',
+        body: JSON.stringify({ conversationId })
+      });
+    }
+  }
+
+  sendUntyping(conversationId) {
+    if (this.client && this.client.connected) {
+      this.client.publish({
+        destination: '/app/chat.untyping',
+        body: JSON.stringify({ conversationId })
+      });
+    }
+  }
+
+  sendSeen(conversationId, messageId, senderId) {
+    if (this.client && this.client.connected) {
+      const payload = {
+        conversationId,
+        messageId,
+        senderId
+      };
+      this.client.publish({
+        destination: '/app/chat.seen',
+        body: JSON.stringify(payload)
+      });
+    }
+  }
+
+  sendRevoke(conversationId, messageId) {
+    if (this.client && this.client.connected) {
+      const payload = {
+        conversationId,
+        messageId
+      };
+      this.client.publish({
+        destination: '/app/chat.revoke',
+        body: JSON.stringify(payload)
+      });
+    }
+  }
+
+  sendAddMember(conversationId, userIds) {
+    if (this.client && this.client.connected) {
+      this.client.publish({
+        destination: '/app/chat.add',
+        body: JSON.stringify({ conversationId, userIds })
+      });
+    }
+  }
+
+  sendDeleteMember(conversationId, userIds) {
+    if (this.client && this.client.connected) {
+      this.client.publish({
+        destination: '/app/chat.delete',
+        body: JSON.stringify({ conversationId, userIds })
+      });
+    }
+  }
+
+  sendLeaveConversation(conversationId) {
+    if (this.client && this.client.connected) {
+      this.client.publish({
+        destination: '/app/chat.leave',
+        body: JSON.stringify({ conversationId })
+      });
     }
   }
 

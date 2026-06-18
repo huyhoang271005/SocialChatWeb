@@ -51,7 +51,7 @@ class Router {
         stylePath: 'modules/sessions/sessions.css'
       }
     };
-    
+
     window.addEventListener('hashchange', () => this.handleRouting());
     window.addEventListener('DOMContentLoaded', () => this.handleRouting());
   }
@@ -76,12 +76,12 @@ class Router {
       }
     }
     this.currentView = null;
-    
+
     // Parse route name and query parameters
     const hashParts = hash.split('?');
     const routeName = hashParts[0];
     const queryString = hashParts[1] || '';
-    
+
     const queryParams = {};
     if (queryString) {
       const pairs = queryString.split('&');
@@ -92,7 +92,7 @@ class Router {
         }
       }
     }
-    
+
     // Simple session guard using routeName instead of full hash
     let token = sessionStorage.getItem('chat_access_token');
     const profileCompleted = localStorage.getItem('chat_profile_completed') === 'true';
@@ -104,10 +104,18 @@ class Router {
         const refreshResponse = await api.get('auth/refresh-token');
         if (refreshResponse) {
           token = (refreshResponse.data && (refreshResponse.data.accessToken || refreshResponse.data.token)) ||
-                  refreshResponse.accessToken || refreshResponse.token;
+            refreshResponse.accessToken || refreshResponse.token;
+          const firebaseToken = (refreshResponse.data && refreshResponse.data.firebaseToken) || refreshResponse.firebaseToken;
+          const userId = (refreshResponse.data && refreshResponse.data.userId) || refreshResponse.userId;
           if (token) {
             sessionStorage.setItem('chat_access_token', token);
             sessionStorage.setItem('chat_auth_token', token);
+          }
+          if (firebaseToken) {
+            sessionStorage.setItem('chat_firebase_token', firebaseToken);
+          }
+          if (userId) {
+            localStorage.setItem('chat_user_id', userId);
           }
         }
       } catch (err) {
@@ -126,7 +134,7 @@ class Router {
         console.warn('[Router] Không thể ngắt kết nối WebSocket:', e);
       }
     }
-    
+
     if (token) {
       if (profileCompleted) {
         if (routeName === 'login' || routeName === 'register' || routeName === '') {
@@ -160,7 +168,7 @@ class Router {
       // Remove layout structure if navigating to a public route
       appContainer.innerHTML = '';
       appContainer.className = '';
-      
+
       const routeConfig = this.routes[routeName] || this.routes['login'];
       try {
         loadModuleStyle(routeConfig.stylePath);
@@ -231,6 +239,16 @@ class Router {
                 </nav>
                 
                 <div class="nav-footer">
+                  <button id="nav-btn-notifications" class="nav-notification-btn" title="Đang tải...">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-bell-icon disabled">
+                      <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                      <path d="M18.63 13A17.89 17.89 0 0 1 18 8"></path>
+                      <path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"></path>
+                      <path d="M18 8a6 6 0 0 0-9.33-5"></path>
+                      <line x1="1" y1="1" x2="23" y2="23"></line>
+                    </svg>
+                  </button>
+
                   <button id="nav-btn-logout" class="nav-logout-btn" title="Đăng xuất">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -267,7 +285,7 @@ class Router {
     }
   }
 
-  bindSidebarEvents() {
+  async bindSidebarEvents() {
     const logoutBtn = document.getElementById('nav-btn-logout');
     if (logoutBtn) {
       logoutBtn.addEventListener('click', async () => {
@@ -294,6 +312,96 @@ class Router {
           this.navigate('login');
         }
       });
+    }
+
+    const notificationBtn = document.getElementById('nav-btn-notifications');
+    if (notificationBtn) {
+      try {
+        const { api } = await import('./api.js');
+
+        const updateUI = (enabled) => {
+          if (enabled) {
+            notificationBtn.innerHTML = `
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-bell-icon enabled">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+              </svg>
+            `;
+            notificationBtn.title = 'Tắt thông báo ứng dụng';
+          } else {
+            notificationBtn.innerHTML = `
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-bell-icon disabled">
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                <path d="M18.63 13A17.89 17.89 0 0 1 18 8"></path>
+                <path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"></path>
+                <path d="M18 8a6 6 0 0 0-9.33-5"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            `;
+            notificationBtn.title = 'Bật thông báo ứng dụng';
+          }
+        };
+
+        // Fetch initial status
+        api.get('notifications/status')
+          .then(res => {
+            if (res && res.success) {
+              updateUI(res.data === true);
+            } else {
+              updateUI(false);
+            }
+          })
+          .catch(err => {
+            console.warn('Failed to load initial notification status:', err);
+            updateUI(false);
+          });
+
+        notificationBtn.addEventListener('click', async () => {
+          const bellIcon = notificationBtn.querySelector('.nav-bell-icon');
+          const isEnabled = bellIcon && bellIcon.classList.contains('enabled');
+          const endpoint = isEnabled ? 'notifications/disable' : 'notifications/enable';
+
+          let firebaseToken = sessionStorage.getItem('chat_firebase_token');
+          if (!firebaseToken) {
+            try {
+              const { getCurrentFirebaseToken } = await import('./firebase.js');
+              firebaseToken = await getCurrentFirebaseToken();
+              if (firebaseToken) {
+                sessionStorage.setItem('chat_firebase_token', firebaseToken);
+              }
+            } catch (err) {
+              console.warn('Could not retrieve firebaseToken from Firebase Auth:', err);
+            }
+          }
+
+          const payload = { firebaseToken: firebaseToken || '' };
+
+          if (!isEnabled) {
+            try {
+              const { getFCMToken } = await import('./firebase.js');
+              const fcmToken = await getFCMToken();
+              if (fcmToken) {
+                payload.fcmToken = fcmToken;
+              }
+            } catch (err) {
+              console.error('Error getting fcmToken:', err);
+            }
+          }
+
+          try {
+            const res = await api.post(endpoint, payload);
+            if (res && res.success) {
+              updateUI(!isEnabled);
+            } else {
+              console.error('Failed to change notification status:', res?.message);
+            }
+          } catch (err) {
+            console.error('Error changing notification status:', err);
+          }
+        });
+      } catch (err) {
+        console.error('Failed to initialize notification button logic:', err);
+      }
     }
   }
 

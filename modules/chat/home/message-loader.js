@@ -1,0 +1,104 @@
+import { api } from '../../../js/core/api.js';
+
+export const MessageLoader = {
+  async loadMessages(ctx, conversationId, nextPage = false) {
+    if (ctx.messagesLoading) return;
+    ctx.messagesLoading = true;
+
+    const cacheKey = `chat_messages_cache_${conversationId}`;
+    const msgContainer = document.getElementById('chat-messages-container');
+
+    try {
+      let page = nextPage ? (ctx.messagesPage || 0) + 1 : 0;
+      let size = 20;
+      let lastId = '';
+
+      if (nextPage && ctx.messages.length > 0) {
+        const oldestMsg = ctx.messages[0];
+        lastId = oldestMsg.id || '';
+      }
+
+      let url = `messages/${conversationId}?page=${page}&size=${size}`;
+      if (lastId) {
+        url += `&lastId=${lastId}`;
+      }
+
+      const response = await api.get(url);
+      if (response && response.success) {
+        let messagesList = [];
+        let serverHasMore = false;
+
+        if (response.data) {
+          if (Array.isArray(response.data.data)) {
+            messagesList = response.data.data;
+            serverHasMore = response.data.hasMore === true;
+          } else if (Array.isArray(response.data)) {
+            messagesList = response.data;
+          }
+        }
+
+        ctx.hasMoreMessages = serverHasMore;
+
+        const currentUserId = localStorage.getItem('chat_user_id') || 'user_me';
+        const mappedMessages = messagesList.map(msg => {
+          const senderId = msg.senderId !== undefined && msg.senderId !== null ? msg.senderId : msg.sender?.userId;
+          const isRevoked = msg.revoked === true;
+          return {
+            id: msg.messageId || msg.id,
+            sender: String(senderId) === String(currentUserId) ? 'me' : 'them',
+            text: isRevoked ? 'Tin nhắn đã bị thu hồi' : (msg.text || msg.message || ''),
+            type: msg.type || 'TEXT',
+            time: new Date(msg.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+            status: 'sent',
+            isRevoked: isRevoked
+          };
+        });
+
+        // Đảo ngược danh sách tin nhắn để hiển thị theo thứ tự thời gian tăng dần (cũ ở trên, mới ở dưới)
+        mappedMessages.reverse();
+
+        if (nextPage) {
+          ctx.messagesPage = page;
+          const previousScrollHeight = msgContainer ? msgContainer.scrollHeight : 0;
+
+          ctx.messages = [...mappedMessages, ...ctx.messages];
+          ctx.resolveMessagesSeenStatus(conversationId);
+
+          sessionStorage.setItem(cacheKey, JSON.stringify(ctx.messages));
+          ctx.renderMessages();
+
+          if (msgContainer) {
+            msgContainer.scrollTop = msgContainer.scrollHeight - previousScrollHeight;
+          }
+        } else {
+          ctx.messagesPage = 0;
+          ctx.messages = mappedMessages;
+          ctx.resolveMessagesSeenStatus(conversationId);
+
+          sessionStorage.setItem(cacheKey, JSON.stringify(ctx.messages));
+          ctx.renderMessages();
+          if (msgContainer) {
+            msgContainer.scrollTop = msgContainer.scrollHeight;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[HomeView] Failed to load messages:', err);
+    } finally {
+      ctx.messagesLoading = false;
+    }
+  },
+
+  setupMessagesScroll(ctx) {
+    const msgContainer = document.getElementById('chat-messages-container');
+    if (!msgContainer) return;
+
+    msgContainer.addEventListener('scroll', () => {
+      if (ctx.hasMoreMessages && !ctx.messagesLoading && msgContainer.scrollTop === 0) {
+        if (ctx.conversationId) {
+          this.loadMessages(ctx, ctx.conversationId, true);
+        }
+      }
+    });
+  }
+};

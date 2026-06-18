@@ -104,6 +104,36 @@
   flex-shrink: 0;
 }
 
+.nav-notification-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.nav-notification-btn:hover {
+  color: var(--accent-color);
+  background-color: hsla(230, 25%, 20%, 0.45);
+  transform: scale(1.05);
+}
+
+.nav-notification-btn .nav-bell-icon.enabled {
+  color: var(--accent-color);
+  fill: hsla(217, 100%, 61%, 0.2);
+  filter: drop-shadow(0 0 4px var(--accent-glow));
+}
+
+.nav-notification-btn .nav-bell-icon.disabled {
+  color: var(--text-muted);
+}
+
 .nav-logout-btn {
   width: 44px;
   height: 44px;
@@ -202,7 +232,8 @@
     border-left: 1px solid var(--border-color);
   }
 
-  .nav-logout-btn {
+  .nav-logout-btn,
+  .nav-notification-btn {
     width: 44px;
     height: 44px;
   }

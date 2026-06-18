@@ -51,7 +51,7 @@ export async function refreshAccessToken() {
 
   try {
     const { showDialog } = await import('../shared/dialog/dialog.js');
-    
+
     const res = await fetch(`${CONFIG.API_BASE_URL}/auth/refresh-token`, {
       method: "GET",
       credentials: "include",
@@ -70,10 +70,10 @@ export async function refreshAccessToken() {
     if (res.status === 401) {
       localStorage.setItem('chat_remember_me', 'false');
       sessionStorage.clear();
-      
+
       const serverMsg = body && body.message ? formatDateTimeInText(body.message) : null;
       const displayMsg = serverMsg || 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.';
-      
+
       const errorResult = {
         success: false,
         message: displayMsg,
@@ -125,9 +125,17 @@ export async function refreshAccessToken() {
 
     const token = body.data;
     const newAccessToken = token?.accessToken;
+    const firebaseToken = token?.firebaseToken;
+    const userId = token?.userId;
 
     if (newAccessToken) {
       sessionStorage.setItem('chat_access_token', newAccessToken);
+    }
+    if (firebaseToken) {
+      sessionStorage.setItem('chat_firebase_token', firebaseToken);
+    }
+    if (userId) {
+      localStorage.setItem('chat_user_id', userId);
     }
 
     refreshQueue.forEach(({ resolve }) => resolve(body));
@@ -167,10 +175,10 @@ export const handleTokenRefresh = refreshAccessToken;
 function isPublicOrAuthRoute(endpoint) {
   const path = endpoint.replace(/^\//, '').split('?')[0];
   return path === 'auth' || path.startsWith('auth/') ||
-         path === 'users/auth' || path.startsWith('users/auth/') ||
-         path === 'profiles/auth' || path.startsWith('profiles/auth/') ||
-         path === 'ws' || path.startsWith('ws/') ||
-         path === 'verifications' || path.startsWith('verifications/');
+    path === 'users/auth' || path.startsWith('users/auth/') ||
+    path === 'profiles/auth' || path.startsWith('profiles/auth/') ||
+    path === 'ws' || path.startsWith('ws/') ||
+    path === 'verifications' || path.startsWith('verifications/');
 }
 
 async function request(endpoint, options = {}, alreadyRefreshed = false) {
