@@ -1,5 +1,15 @@
 /* Left Navigation Sidebar styles */
 
+/* Lock body and html scroll when the app layout is active to prevent page overscroll/bouncing */
+html:has(.app-layout),
+body:has(.app-layout) {
+  overflow: hidden !important;
+  height: 100% !important;
+  position: fixed !important;
+  width: 100% !important;
+  overscroll-behavior: none !important;
+}
+
 .app-layout {
   position: fixed;
   top: 0;
@@ -159,6 +169,7 @@
   flex: 1;
   height: 100%;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 30px;
   background: transparent;
   position: relative;
@@ -190,13 +201,14 @@
 
   .nav-sidebar {
     width: 100%;
-    height: 60px;
+    height: calc(60px + env(safe-area-inset-bottom));
     border-right: none;
     border-top: 1px solid var(--border-color);
     flex-direction: row;
-    padding: 0 10px;
+    padding: 0 10px env(safe-area-inset-bottom) 10px;
     align-items: center;
     justify-content: space-between;
+    box-sizing: border-box;
   }
 
   .nav-logo {
@@ -240,6 +252,17 @@
 
   .main-content-panel {
     padding: 16px;
-    height: calc(100% - 60px);
+    height: calc(100% - 60px - env(safe-area-inset-bottom));
+  }
+
+  /* Hide bottom bar and make conversation full screen when entering a chat */
+  .app-layout:has(.chat-dashboard.show-chat) .nav-sidebar {
+    display: none !important;
+  }
+
+  .app-layout:has(.chat-dashboard.show-chat) .main-content-panel {
+    height: 100% !important;
+    padding: 0 !important;
+    overflow: hidden !important;
   }
 }

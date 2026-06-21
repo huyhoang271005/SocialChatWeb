@@ -1,5 +1,5 @@
 export const CONFIG = {
-  API_BASE_URL: 'http://localhost:8080',
+  API_BASE_URL: 'https://myproject.huyhoang271.id.vn',
   FIREBASE_CONFIG: {
     apiKey: "AIzaSyCA_xdCJa2xbnB3OMnGCx3KpsYd9Rdzn_s",
     authDomain: "social-chat-c0602.firebaseapp.com",

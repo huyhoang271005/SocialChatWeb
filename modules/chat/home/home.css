@@ -55,6 +55,7 @@
 .conversations-list {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
 }
 
 .conversation-item {
@@ -150,6 +151,8 @@
   flex: 1;
   padding: 20px;
   overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
   display: flex;
   flex-direction: column;
   gap: 15px;
@@ -161,7 +164,6 @@
   border-radius: var(--radius-md);
   font-size: 0.92rem;
   line-height: 1.4;
-  white-space: pre-wrap;
   word-break: break-word;
 }
 
@@ -1027,4 +1029,155 @@
   background: rgba(255, 255, 255, 0.05);
   color: var(--text-muted);
   border: 1px solid var(--border-color);
+}
+
+/* Group Chat Incoming Message styles */
+.group-incoming-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  width: 100%;
+  margin: 4px 0;
+  align-self: flex-start;
+}
+
+.group-incoming-row .message-sender-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-top: 18px; /* Offset for the height of the name above the bubble */
+  flex-shrink: 0;
+  border: 1px solid var(--border-color);
+}
+
+.group-incoming-row .message-sender-name {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-left: 2px;
+  margin-bottom: 2px;
+}
+
+/* --- MESSAGE REPLY STYLES --- */
+
+/* Reply Preview banner above input field */
+.reply-preview-container {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background-color: hsla(230, 25%, 12%, 0.7);
+  border-bottom: 1px solid var(--border-color);
+  width: 100%;
+  animation: slideDownReply 0.25s cubic-bezier(0.4, 0, 0.2, 1) both;
+  border-radius: var(--radius-md);
+  margin-bottom: 5px;
+}
+
+@keyframes slideDownReply {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.btn-cancel-reply {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  padding: 0;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel-reply:hover {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #ef4444 !important;
+}
+
+/* Replied message block inside message bubble */
+.replied-message-quote {
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  background: rgba(0, 0, 0, 0.2);
+  border-left: 3px solid var(--accent-color);
+  font-size: 0.8rem;
+  max-width: 100%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  text-align: left;
+  gap: 2px;
+}
+
+.replied-message-quote:hover {
+  background: rgba(0, 0, 0, 0.3);
+  filter: brightness(1.1);
+}
+
+.message-outgoing .replied-message-quote {
+  border-left-color: rgba(255, 255, 255, 0.75);
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.replied-message-quote div {
+  text-align: left !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Highlight flash animation when scrolling to message */
+.highlight-flash .message-bubble {
+  animation: flash-highlight-anim 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+@keyframes flash-highlight-anim {
+  0% {
+    box-shadow: 0 0 0 4px var(--accent-color);
+    filter: brightness(1.25);
+    transform: scale(1.02);
+  }
+  50% {
+    box-shadow: 0 0 0 2px var(--accent-color);
+    filter: brightness(1.1);
+    transform: scale(1.01);
+  }
+  100% {
+    box-shadow: none;
+    filter: none;
+    transform: scale(0); /* note: standard transform scale should be 1 */
+    transform: scale(1);
+  }
+}
+
+/* Swipe interaction transitions */
+.message-bubble {
+  transition: transform 0.2s ease;
+}
+
+.message-bubble-wrapper {
+  position: relative;
+  overflow: visible;
+}
+
+/* Dropdown styling adjustments for Replies */
+.message-dropdown-menu .dropdown-item.btn-reply-message:hover {
+  background-color: hsla(230, 25%, 20%, 0.4);
+  color: var(--accent-color);
 }

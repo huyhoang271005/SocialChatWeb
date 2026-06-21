@@ -177,8 +177,10 @@ class WebSocketManager {
    * @param {string} conversationId
    * @param {string} text
    * @param {string} type 'text'|'image'|'file'|'revoked'
+   * @param fileId
+   * @param replyMessageId
    */
-  send(conversationId, text, type = 'TEXT', fileId = null) {
+  send(conversationId, text, type = 'TEXT', fileId = null, replyMessageId = null) {
     const payload = {
       conversationId,
       text,
@@ -186,6 +188,9 @@ class WebSocketManager {
     };
     if (fileId) {
       payload.fileId = fileId;
+    }
+    if (replyMessageId) {
+      payload.replyMessageId = replyMessageId;
     }
 
     if (this.client && this.client.connected) {
@@ -241,32 +246,7 @@ class WebSocketManager {
     }
   }
 
-  sendAddMember(conversationId, userIds) {
-    if (this.client && this.client.connected) {
-      this.client.publish({
-        destination: '/app/chat.add',
-        body: JSON.stringify({ conversationId, userIds })
-      });
-    }
-  }
 
-  sendDeleteMember(conversationId, userIds) {
-    if (this.client && this.client.connected) {
-      this.client.publish({
-        destination: '/app/chat.delete',
-        body: JSON.stringify({ conversationId, userIds })
-      });
-    }
-  }
-
-  sendLeaveConversation(conversationId) {
-    if (this.client && this.client.connected) {
-      this.client.publish({
-        destination: '/app/chat.leave',
-        body: JSON.stringify({ conversationId })
-      });
-    }
-  }
 
   /**
    * Đăng ký nhận tin nhắn của một cuộc hội thoại hoặc topic tùy chỉnh

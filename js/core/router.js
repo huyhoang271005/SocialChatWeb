@@ -54,6 +54,10 @@ class Router {
 
     window.addEventListener('hashchange', () => this.handleRouting());
     window.addEventListener('DOMContentLoaded', () => this.handleRouting());
+
+    this.visualViewportResizeListener = null;
+    this.visualViewportScrollListener = null;
+    this.windowScrollListener = null;
   }
 
   navigate(route) {
@@ -65,17 +69,6 @@ class Router {
     if (hash === this.currentHash) {
       return;
     }
-    this.currentHash = hash;
-
-    // Call cleanup of current view if exists
-    if (this.currentView && typeof this.currentView.cleanup === 'function') {
-      try {
-        this.currentView.cleanup();
-      } catch (e) {
-        console.warn('Failed to cleanup current view:', e);
-      }
-    }
-    this.currentView = null;
 
     // Parse route name and query parameters
     const hashParts = hash.split('?');
@@ -92,6 +85,29 @@ class Router {
         }
       }
     }
+
+    const previousRouteName = this.currentRouteName;
+    this.currentRouteName = routeName;
+    this.currentHash = hash;
+
+    if (this.currentView && previousRouteName === routeName) {
+      // If the route name hasn't changed, we can just update the view with new query parameters
+      if (typeof this.currentView.onRouteUpdate === 'function') {
+        this.currentView.onRouteUpdate(queryParams);
+        return;
+      }
+    }
+
+    // Call cleanup of current view if exists
+    if (this.currentView && typeof this.currentView.cleanup === 'function') {
+      try {
+        this.currentView.cleanup();
+      } catch (e) {
+        console.warn('Failed to cleanup current view:', e);
+      }
+    }
+    this.currentView = null;
+
 
     // Simple session guard using routeName instead of full hash
     let token = sessionStorage.getItem('chat_access_token');
@@ -165,6 +181,7 @@ class Router {
     if (!appContainer) return;
 
     if (isPublic) {
+      this.cleanupViewportHeightSync();
       // Remove layout structure if navigating to a public route
       appContainer.innerHTML = '';
       appContainer.className = '';
@@ -264,6 +281,7 @@ class Router {
           `;
           contentMount = document.getElementById('main-content-mount');
           this.bindSidebarEvents();
+          this.setupViewportHeightSync();
         }
 
         // Highlight active navbar tab icon
@@ -359,6 +377,21 @@ class Router {
         notificationBtn.addEventListener('click', async () => {
           const bellIcon = notificationBtn.querySelector('.nav-bell-icon');
           const isEnabled = bellIcon && bellIcon.classList.contains('enabled');
+          const actionText = isEnabled ? 'tắt' : 'bật';
+
+          const { showDialog } = await import('../shared/dialog/dialog.js');
+          const confirm = await showDialog({
+            title: isEnabled ? 'Tắt thông báo' : 'Bật thông báo',
+            message: `Bạn có chắc chắn muốn ${actionText} thông báo ứng dụng?`,
+            type: 'info',
+            buttons: [
+              { text: 'Hủy', type: 'secondary', value: false },
+              { text: isEnabled ? 'Tắt' : 'Bật', type: isEnabled ? 'danger' : 'primary', value: true }
+            ]
+          });
+
+          if (!confirm) return;
+
           const endpoint = isEnabled ? 'notifications/disable' : 'notifications/enable';
 
           let firebaseToken = sessionStorage.getItem('chat_firebase_token');
@@ -392,11 +425,26 @@ class Router {
             const res = await api.post(endpoint, payload);
             if (res && res.success) {
               updateUI(!isEnabled);
+              await showDialog({
+                title: 'Thành công',
+                message: `Đã ${isEnabled ? 'tắt' : 'bật'} thông báo ứng dụng thành công!`,
+                type: 'success'
+              });
             } else {
-              console.error('Failed to change notification status:', res?.message);
+              const errMsg = res?.message || 'Không thể thay đổi trạng thái thông báo.';
+              await showDialog({
+                title: 'Lỗi',
+                message: errMsg,
+                type: 'error'
+              });
             }
           } catch (err) {
             console.error('Error changing notification status:', err);
+            await showDialog({
+              title: 'Lỗi kết nối',
+              message: 'Đã xảy ra lỗi hệ thống khi kết nối đến máy chủ.',
+              type: 'error'
+            });
           }
         });
       } catch (err) {
@@ -414,6 +462,76 @@ class Router {
         <button onclick="location.reload()" class="btn btn-secondary" style="width: auto; margin-top: 15px;">Thử lại</button>
       </div>
     `;
+  }
+
+  setupViewportHeightSync() {
+    if (!window.visualViewport) return;
+
+    // Avoid duplicate listener registration
+    if (this.visualViewportResizeListener) return;
+
+    const adjustViewport = () => {
+      const viewportHeight = window.visualViewport.height;
+      const appLayout = document.querySelector('.app-layout');
+      const appContainer = document.getElementById('app');
+      if (appLayout) {
+        appLayout.style.height = `${viewportHeight}px`;
+      }
+      if (appContainer) {
+        appContainer.style.height = `${viewportHeight}px`;
+      }
+
+      // Auto-scroll messages to bottom if user is focusing input
+      const msgContainer = document.getElementById('chat-messages-container');
+      const messageInput = document.getElementById('message-input');
+      if (msgContainer && messageInput && document.activeElement === messageInput) {
+        setTimeout(() => {
+          msgContainer.scrollTop = msgContainer.scrollHeight;
+        }, 80);
+      }
+    };
+
+    const preventWindowScroll = () => {
+      if (window.scrollY !== 0 || window.scrollX !== 0) {
+        window.scrollTo(0, 0);
+      }
+    };
+
+    this.visualViewportResizeListener = adjustViewport;
+    this.visualViewportScrollListener = adjustViewport;
+    this.windowScrollListener = preventWindowScroll;
+
+    window.visualViewport.addEventListener('resize', this.visualViewportResizeListener);
+    window.visualViewport.addEventListener('scroll', this.visualViewportScrollListener);
+    window.addEventListener('scroll', this.windowScrollListener);
+
+    // Initial adjust
+    adjustViewport();
+  }
+
+  cleanupViewportHeightSync() {
+    if (window.visualViewport) {
+      if (this.visualViewportResizeListener) {
+        window.visualViewport.removeEventListener('resize', this.visualViewportResizeListener);
+        this.visualViewportResizeListener = null;
+      }
+      if (this.visualViewportScrollListener) {
+        window.visualViewport.removeEventListener('scroll', this.visualViewportScrollListener);
+        this.visualViewportScrollListener = null;
+      }
+    }
+    if (this.windowScrollListener) {
+      window.removeEventListener('scroll', this.windowScrollListener);
+      this.windowScrollListener = null;
+    }
+    const appContainer = document.getElementById('app');
+    if (appContainer) {
+      appContainer.style.height = '';
+    }
+    const appLayout = document.querySelector('.app-layout');
+    if (appLayout) {
+      appLayout.style.height = '';
+    }
   }
 }
 

@@ -1,5 +1,31 @@
 import { socket } from '../../../js/core/websocket.js';
 
+function mergeConversation(oldConvo, newConvoDto) {
+  if (oldConvo && oldConvo.userConversations && newConvoDto && newConvoDto.userConversations) {
+    newConvoDto.userConversations.forEach(newU => {
+      const oldU = oldConvo.userConversations.find(u => String(u.userId) === String(newU.userId));
+      if (oldU) {
+        if (String(newU.lastMessageId) !== String(oldU.lastMessageId)) {
+          newU.seenAt = Date.now();
+        } else {
+          newU.seenAt = oldU.seenAt;
+        }
+      }
+    });
+  }
+  return { ...oldConvo, ...newConvoDto };
+}
+
+function formatMessageTime(createdAt) {
+  if (!createdAt) {
+    return new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+  }
+  const d = new Date(createdAt);
+  return !isNaN(d.getTime())
+    ? d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+    : String(createdAt);
+}
+
 export function handleSocketEvent(ctx, event) {
   if (!event) return;
 
@@ -32,58 +58,12 @@ export function handleSocketEvent(ctx, event) {
   }
 
   switch (eventType) {
-    case 'NEW_CONVERSATION':
-      if (conversationDto && conversationDto.conversationId) {
-        const idx = ctx.conversations.findIndex(c => String(c.conversationId) === String(conversationDto.conversationId));
-        let convo;
-        if (idx !== -1) {
-          const existingConvo = ctx.conversations.splice(idx, 1)[0];
-          convo = { ...existingConvo, ...conversationDto };
-          ctx.conversations.unshift(convo);
-        } else {
-          convo = conversationDto;
-          ctx.conversations.unshift(convo);
-        }
-        ctx.renderConversationsList();
 
-        if (String(ctx.conversationId) === String(conversationDto.conversationId)) {
-          const defaultUserAvatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&h=100';
-          const defaultGroupAvatar = 'https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?auto=format&fit=crop&w=100&h=100';
-          let avatarUrl = convo.conversationAvatar || (convo.group ? defaultGroupAvatar : defaultUserAvatar);
-          let displayTitle = convo.title;
-          if (!displayTitle && !convo.group) {
-            const currentUserId = localStorage.getItem('chat_user_id');
-            const otherParticipant = convo.userConversations?.find(u => String(u.userId) !== String(currentUserId));
-            const otherUserId = otherParticipant ? otherParticipant.userId : null;
-            if (otherUserId && ctx.profileCache.has(String(otherUserId))) {
-              displayTitle = ctx.profileCache.get(String(otherUserId)).fullName;
-            } else {
-              displayTitle = 'Đang tải...';
-            }
-          }
-          ctx.updateChatHeader(
-            displayTitle || ('Cuộc trò chuyện ' + convo.conversationId),
-            avatarUrl,
-            convo.group ? 'Nhóm trò chuyện' : 'Đang hoạt động',
-            convo.conversationId,
-            ctx.conversations
-          );
 
-          // Tự động làm mới danh sách thành viên trong modal đang hiển thị
-          const eventObj = new CustomEvent('members-updated', { detail: { conversationId: convo.conversationId } });
-          document.dispatchEvent(eventObj);
-        }
-      }
-      break;
-
-    case 'ADD_MEMBER':
-    case 'DELETE_MEMBER':
-    case 'REMOVE_MEMBER':
-    case 'LEAVE_CONVERSATION':
     case 'UPDATE_CONVERSATION':
       {
         let conversationsList = null;
-        if (Array.isArray(data)) {
+        if (data && Array.isArray(data)) {
           conversationsList = data;
         } else if (data && Array.isArray(data.conversations)) {
           conversationsList = data.conversations;
@@ -109,15 +89,22 @@ export function handleSocketEvent(ctx, event) {
             if (activeConvo) {
               const defaultUserAvatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&h=100';
               const defaultGroupAvatar = 'https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?auto=format&fit=crop&w=100&h=100';
-              let avatarUrl = activeConvo.conversationAvatar || (activeConvo.group ? defaultGroupAvatar : defaultUserAvatar);
+              let avatarUrl = activeConvo.conversationAvatarUrl || (activeConvo.group ? defaultGroupAvatar : defaultUserAvatar);
               let displayTitle = activeConvo.title;
               if (!displayTitle && !activeConvo.group) {
                 const otherParticipant = activeConvo.userConversations?.find(u => String(u.userId) !== String(currentUserId));
-                const otherUserId = otherParticipant ? otherParticipant.userId : null;
-                if (otherUserId && ctx.profileCache.has(String(otherUserId))) {
-                  displayTitle = ctx.profileCache.get(String(otherUserId)).fullName;
+                if (otherParticipant) {
+                  displayTitle = otherParticipant.fullName ||
+                                 otherParticipant.user?.fullName ||
+                                 otherParticipant.displayName ||
+                                 otherParticipant.username ||
+                                 otherParticipant.user?.username ||
+                                 'Người dùng';
+                  if (otherParticipant.avatarUrl || otherParticipant.user?.avatarUrl) {
+                    avatarUrl = otherParticipant.avatarUrl || otherParticipant.user.avatarUrl;
+                  }
                 } else {
-                  displayTitle = 'Đang tải...';
+                  displayTitle = 'Người dùng';
                 }
               }
               ctx.updateChatHeader(
@@ -137,46 +124,75 @@ export function handleSocketEvent(ctx, event) {
           const currentUserId = String(localStorage.getItem('chat_user_id'));
           const isStillMember = conversationDto.userConversations?.some(u => String(u.userId) === currentUserId);
 
-          if (String(conversationDto.conversationId) === activeConvoId && !isStillMember) {
+          if (!isStillMember) {
             ctx.conversations = ctx.conversations.filter(c => String(c.conversationId) !== String(conversationDto.conversationId));
             ctx.renderConversationsList();
-            ctx.conversationId = null;
-            sessionStorage.removeItem(`chat_messages_cache_${activeConvoId}`);
-            ctx.renderEmptyChatFrame();
+            if (String(conversationDto.conversationId) === activeConvoId) {
+              ctx.conversationId = null;
+              sessionStorage.removeItem(`chat_messages_cache_${activeConvoId}`);
+              ctx.renderEmptyChatFrame();
+            }
           } else {
             const idx = ctx.conversations.findIndex(c => String(c.conversationId) === String(conversationDto.conversationId));
+            let convo;
             if (idx !== -1) {
-              ctx.conversations[idx] = { ...ctx.conversations[idx], ...conversationDto };
-              ctx.renderConversationsList();
+              const oldC = ctx.conversations.splice(idx, 1)[0];
+              convo = mergeConversation(oldC, conversationDto);
+            } else {
+              convo = conversationDto;
+            }
+            ctx.conversations.unshift(convo);
+            ctx.renderConversationsList();
 
-              if (String(ctx.conversationId) === String(conversationDto.conversationId)) {
-                const convo = ctx.conversations[idx];
-                const defaultUserAvatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&h=100';
-                const defaultGroupAvatar = 'https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?auto=format&fit=crop&w=100&h=100';
-                let avatarUrl = convo.conversationAvatar || (convo.group ? defaultGroupAvatar : defaultUserAvatar);
-                let displayTitle = convo.title;
-                if (!displayTitle && !convo.group) {
-                  const otherParticipant = convo.userConversations?.find(u => String(u.userId) !== String(currentUserId));
-                  const otherUserId = otherParticipant ? otherParticipant.userId : null;
-                  if (otherUserId && ctx.profileCache.has(String(otherUserId))) {
-                    displayTitle = ctx.profileCache.get(String(otherUserId)).fullName;
-                  } else {
-                    displayTitle = 'Đang tải...';
+            if (String(ctx.conversationId) === String(conversationDto.conversationId)) {
+              const defaultUserAvatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&h=100';
+              const defaultGroupAvatar = 'https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?auto=format&fit=crop&w=100&h=100';
+              let avatarUrl = convo.conversationAvatarUrl || (convo.group ? defaultGroupAvatar : defaultUserAvatar);
+              let displayTitle = convo.title;
+              if (!displayTitle && !convo.group) {
+                const otherParticipant = convo.userConversations?.find(u => String(u.userId) !== String(currentUserId));
+                if (otherParticipant) {
+                  displayTitle = otherParticipant.fullName ||
+                                 otherParticipant.user?.fullName ||
+                                 otherParticipant.displayName ||
+                                 otherParticipant.username ||
+                                 otherParticipant.user?.username ||
+                                 'Người dùng';
+                  if (otherParticipant.avatarUrl || otherParticipant.user?.avatarUrl) {
+                    avatarUrl = otherParticipant.avatarUrl || otherParticipant.user.avatarUrl;
                   }
+                } else {
+                  displayTitle = 'Người dùng';
                 }
-                ctx.updateChatHeader(
-                  displayTitle || ('Cuộc trò chuyện ' + convo.conversationId),
-                  avatarUrl,
-                  convo.group ? 'Nhóm trò chuyện' : 'Đang hoạt động',
-                  convo.conversationId,
-                  ctx.conversations
-                );
-
-                const eventObj = new CustomEvent('members-updated', { detail: { conversationId: convo.conversationId } });
-                document.dispatchEvent(eventObj);
               }
+              ctx.updateChatHeader(
+                displayTitle || ('Cuộc trò chuyện ' + convo.conversationId),
+                avatarUrl,
+                convo.group ? 'Nhóm trò chuyện' : 'Đang hoạt động',
+                convo.conversationId,
+                ctx.conversations
+              );
+
+              const eventObj = new CustomEvent('members-updated', { detail: { conversationId: convo.conversationId } });
+              document.dispatchEvent(eventObj);
             }
           }
+        }
+      }
+      break;
+
+    case 'DELETE_CONVERSATION':
+      if (conversationDto && conversationDto.conversationId) {
+        const targetConvoId = String(conversationDto.conversationId);
+        const activeConvoId = String(ctx.conversationId);
+
+        ctx.conversations = ctx.conversations.filter(c => String(c.conversationId) !== targetConvoId);
+        ctx.renderConversationsList();
+
+        if (targetConvoId === activeConvoId) {
+          ctx.conversationId = null;
+          sessionStorage.removeItem(`chat_messages_cache_${activeConvoId}`);
+          ctx.renderEmptyChatFrame();
         }
       }
       break;
@@ -219,9 +235,13 @@ export function handleSocketEvent(ctx, event) {
                 if (existingIndex !== -1) {
                   ctx.messages[existingIndex].status = 'sent';
                   ctx.messages[existingIndex].id = messageDto.messageId || messageDto.id;
-                  ctx.messages[existingIndex].time = new Date(messageDto.createdAt || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+                  ctx.messages[existingIndex].time = formatMessageTime(messageDto.createdAt);
                   ctx.messages[existingIndex].isRevoked = isRevoked;
                   ctx.messages[existingIndex].type = messageDto.type || messageDto.messageType || ctx.messages[existingIndex].type || 'TEXT';
+                  ctx.messages[existingIndex].replyMessageId = messageDto.replyMessageId || ctx.messages[existingIndex].replyMessageId || null;
+                  ctx.messages[existingIndex].replyText = messageDto.replyText || ctx.messages[existingIndex].replyText || null;
+                  ctx.messages[existingIndex].replyType = messageDto.replyType || ctx.messages[existingIndex].replyType || null;
+                  ctx.messages[existingIndex].replyRevoked = messageDto.replyRevoked === true || ctx.messages[existingIndex].replyRevoked === true;
                   if (isRevoked) {
                     ctx.messages[existingIndex].text = 'Tin nhắn đã bị thu hồi';
                   }
@@ -229,11 +249,16 @@ export function handleSocketEvent(ctx, event) {
                   ctx.messages.push({
                     id: messageDto.messageId || messageDto.id || `msg_${Date.now()}`,
                     sender: isMe ? 'me' : 'them',
+                    senderId: senderId,
                     text: isRevoked ? 'Tin nhắn đã bị thu hồi' : messageText,
                     type: messageDto.type || messageDto.messageType || 'TEXT',
-                    time: new Date(messageDto.createdAt || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+                    time: formatMessageTime(messageDto.createdAt),
                     status: 'sent',
-                    isRevoked: isRevoked
+                    isRevoked: isRevoked,
+                    replyMessageId: messageDto.replyMessageId || null,
+                    replyText: messageDto.replyText || null,
+                    replyType: messageDto.replyType || null,
+                    replyRevoked: messageDto.replyRevoked === true
                   });
                 }
                 sessionStorage.setItem(targetCacheKey, JSON.stringify(ctx.messages));
@@ -255,9 +280,13 @@ export function handleSocketEvent(ctx, event) {
                 if (existingIndex !== -1) {
                   targetMsgs[existingIndex].status = 'sent';
                   targetMsgs[existingIndex].id = messageDto.messageId || messageDto.id;
-                  targetMsgs[existingIndex].time = new Date(messageDto.createdAt || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+                  targetMsgs[existingIndex].time = formatMessageTime(messageDto.createdAt);
                   targetMsgs[existingIndex].isRevoked = isRevoked;
                   targetMsgs[existingIndex].type = messageDto.type || messageDto.messageType || targetMsgs[existingIndex].type || 'TEXT';
+                  targetMsgs[existingIndex].replyMessageId = messageDto.replyMessageId || targetMsgs[existingIndex].replyMessageId || null;
+                  targetMsgs[existingIndex].replyText = messageDto.replyText || targetMsgs[existingIndex].replyText || null;
+                  targetMsgs[existingIndex].replyType = messageDto.replyType || targetMsgs[existingIndex].replyType || null;
+                  targetMsgs[existingIndex].replyRevoked = messageDto.replyRevoked === true || targetMsgs[existingIndex].replyRevoked === true;
                   if (isRevoked) {
                     targetMsgs[existingIndex].text = 'Tin nhắn đã bị thu hồi';
                   }
@@ -265,11 +294,16 @@ export function handleSocketEvent(ctx, event) {
                   targetMsgs.push({
                     id: messageDto.messageId || messageDto.id || `msg_${Date.now()}`,
                     sender: isMe ? 'me' : 'them',
+                    senderId: senderId,
                     text: isRevoked ? 'Tin nhắn đã bị thu hồi' : messageText,
                     type: messageDto.type || messageDto.messageType || 'TEXT',
-                    time: new Date(messageDto.createdAt || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+                    time: formatMessageTime(messageDto.createdAt),
                     status: 'sent',
-                    isRevoked: isRevoked
+                    isRevoked: isRevoked,
+                    replyMessageId: messageDto.replyMessageId || null,
+                    replyText: messageDto.replyText || null,
+                    replyType: messageDto.replyType || null,
+                    replyRevoked: messageDto.replyRevoked === true
                   });
                 }
                 sessionStorage.setItem(targetCacheKey, JSON.stringify(targetMsgs));
@@ -285,11 +319,16 @@ export function handleSocketEvent(ctx, event) {
             ctx.messages.push({
               id: messageDto.messageId || messageDto.id || `msg_${Date.now()}`,
               sender: isMe ? 'me' : 'them',
+              senderId: senderId,
               text: isRevoked ? 'Tin nhắn đã bị thu hồi' : messageText,
               type: messageDto.type || messageDto.messageType || 'TEXT',
-              time: new Date(messageDto.createdAt || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+              time: formatMessageTime(messageDto.createdAt),
               status: 'sent',
-              isRevoked: isRevoked
+              isRevoked: isRevoked,
+              replyMessageId: messageDto.replyMessageId || null,
+              replyText: messageDto.replyText || null,
+              replyType: messageDto.replyType || null,
+              replyRevoked: messageDto.replyRevoked === true
             });
             sessionStorage.setItem(targetCacheKey, JSON.stringify(ctx.messages));
             ctx.renderMessages();
@@ -302,22 +341,33 @@ export function handleSocketEvent(ctx, event) {
         }
 
         if (incomingConvoId !== activeConvoId && !isMe) {
-          // Hiển thị thông báo Toast nếu không ở trong hội thoại đó và không phải mình gửi
-          let senderName = 'Tin nhắn mới';
-          const convo = ctx.conversations.find(c => String(c.conversationId) === incomingConvoId);
-          if (convo) {
-            if (convo.group) {
-              senderName = convo.title || `Nhóm #${incomingConvoId}`;
-            } else {
-              senderName = convo.title || `Trò chuyện #${incomingConvoId}`;
-              const otherParticipant = convo.userConversations?.find(u => String(u.userId) !== String(currentUserId));
-              const otherUserId = otherParticipant ? otherParticipant.userId : null;
-              if (otherUserId && ctx.profileCache.has(String(otherUserId))) {
-                senderName = ctx.profileCache.get(String(otherUserId)).fullName;
+          // Hiển thị thông báo native nếu không ở trong hội thoại đó, không phải mình gửi và tab đang mở hiển thị
+          if (document.visibilityState === 'visible') {
+            let senderName = 'Tin nhắn mới';
+            const convo = ctx.conversations.find(c => String(c.conversationId) === incomingConvoId);
+            if (convo) {
+              if (convo.group) {
+                senderName = convo.title || `Nhóm #${incomingConvoId}`;
+              } else {
+                senderName = convo.title || `Trò chuyện #${incomingConvoId}`;
+                const otherParticipant = convo.userConversations?.find(u => String(u.userId) !== String(currentUserId));
+                const otherUserId = otherParticipant ? otherParticipant.userId : null;
+                if (otherUserId && ctx.profileCache.has(String(otherUserId))) {
+                  senderName = ctx.profileCache.get(String(otherUserId)).fullName;
+                }
               }
             }
+            import('../../../js/core/firebase.js')
+              .then(({ showNativeNotification }) => {
+                showNativeNotification(
+                  senderName,
+                  isRevoked ? 'Tin nhắn đã bị thu hồi' : messageText,
+                  incomingConvoId,
+                  messageDto.messageId || messageDto.id
+                );
+              })
+              .catch(err => console.warn('Không thể tải showNativeNotification từ firebase.js:', err));
           }
-          ctx.showIncomingMessageToast(senderName, isRevoked ? 'Tin nhắn đã bị thu hồi' : messageText, incomingConvoId);
         }
 
         // Cập nhật preview tin nhắn cuối ở sidebar và đưa cuộc trò chuyện lên đầu
@@ -341,9 +391,11 @@ export function handleSocketEvent(ctx, event) {
           if (conversationDto) {
             const idx = ctx.conversations.findIndex(c => String(c.conversationId) === String(conversationDto.conversationId));
             if (idx !== -1) {
-              ctx.conversations.splice(idx, 1);
+              const oldC = ctx.conversations.splice(idx, 1)[0];
+              ctx.conversations.unshift(mergeConversation(oldC, conversationDto));
+            } else {
+              ctx.conversations.unshift(conversationDto);
             }
-            ctx.conversations.unshift(conversationDto);
             ctx.renderConversationsList();
           } else {
             ctx.loadConversations(false);
@@ -364,10 +416,22 @@ export function handleSocketEvent(ctx, event) {
         if (targetCached) {
           try {
             const targetMsgs = JSON.parse(targetCached);
+            let updatedCache = false;
             const msgIndex = targetMsgs.findIndex(m => String(m.id) === targetMsgId);
             if (msgIndex !== -1) {
               targetMsgs[msgIndex].text = 'Tin nhắn đã bị thu hồi';
               targetMsgs[msgIndex].isRevoked = true;
+              updatedCache = true;
+            }
+            // Update any replies to this message in cache
+            targetMsgs.forEach(m => {
+              if (m.replyMessageId && String(m.replyMessageId) === targetMsgId) {
+                m.replyText = 'Tin nhắn đã bị thu hồi';
+                m.replyRevoked = true;
+                updatedCache = true;
+              }
+            });
+            if (updatedCache) {
               sessionStorage.setItem(targetCacheKey, JSON.stringify(targetMsgs));
             }
           } catch (e) {
@@ -376,10 +440,22 @@ export function handleSocketEvent(ctx, event) {
         }
 
         if (incomingConvoId === activeConvoId) {
+          let updatedActive = false;
           const msgIndex = ctx.messages.findIndex(m => String(m.id) === targetMsgId);
           if (msgIndex !== -1) {
             ctx.messages[msgIndex].text = 'Tin nhắn đã bị thu hồi';
             ctx.messages[msgIndex].isRevoked = true;
+            updatedActive = true;
+          }
+          // Update any replies to this message in active messages list
+          ctx.messages.forEach(m => {
+            if (m.replyMessageId && String(m.replyMessageId) === targetMsgId) {
+              m.replyText = 'Tin nhắn đã bị thu hồi';
+              m.replyRevoked = true;
+              updatedActive = true;
+            }
+          });
+          if (updatedActive) {
             ctx.renderMessages();
           }
         }
@@ -409,6 +485,7 @@ export function handleSocketEvent(ctx, event) {
             const userConvo = convo.userConversations.find(u => String(u.userId) === String(senderId));
             if (userConvo) {
               userConvo.lastMessageId = msgId;
+              userConvo.seenAt = Date.now(); // Ghi nhận thời gian xem tin nhắn
             }
           }
 
@@ -432,7 +509,7 @@ export function handleSocketEvent(ctx, event) {
         // Cập nhật cuộc trò chuyện ở sidebar
         const convoIndex = ctx.conversations.findIndex(c => String(c.conversationId) === incomingConvoId);
         if (convoIndex !== -1) {
-          ctx.conversations[convoIndex] = { ...ctx.conversations[convoIndex], ...conversationDto };
+          ctx.conversations[convoIndex] = mergeConversation(ctx.conversations[convoIndex], conversationDto);
           ctx.renderConversationsList();
         }
 

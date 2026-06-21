@@ -1037,23 +1037,23 @@ export const UsersView = {
     if (isGroup) {
       creationPanel.innerHTML = `
         <form id="create-chat-form" class="admin-form-layout" style="display: flex; flex-direction: column; gap: 12px;">
-          <div class="form-group">
-            <label class="form-label" for="chat-title-input" style="font-size: 0.8rem; margin-bottom: 4px;">Tên nhóm trò chuyện</label>
-            <input type="text" id="chat-title-input" class="form-input" placeholder="Nhập tên nhóm..." required style="font-size: 0.85rem; padding: 8px 12px; height: 36px;">
+          <div class="form-group" style="display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <div style="position: relative; width: 60px; height: 60px; border-radius: 50%; overflow: hidden; border: 2px solid var(--border-color); background: hsla(230, 25%, 15%, 0.45);">
+              <img id="chat-avatar-preview" src="https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?auto=format&fit=crop&w=100&h=100" style="width: 100%; height: 100%; object-fit: cover;" alt="Preview">
+            </div>
+            <input type="file" id="chat-avatar-file" accept="image/*" style="display: none;">
+            <button type="button" id="btn-upload-chat-avatar" class="btn btn-secondary" style="font-size: 0.8rem; padding: 6px 12px; height: 32px; display: flex; align-items: center; justify-content: center; gap: 6px; width: auto;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+              </svg>
+              Chọn ảnh đại diện
+            </button>
           </div>
           <div class="form-group">
-            <label class="form-label" for="chat-avatar-input" style="font-size: 0.8rem; margin-bottom: 4px;">Ảnh đại diện nhóm (URL)</label>
-            <div style="display: flex; gap: 8px;">
-              <input type="text" id="chat-avatar-input" class="form-input" placeholder="URL ảnh đại diện..." style="font-size: 0.85rem; padding: 8px 12px; flex: 1; height: 36px;">
-              <input type="file" id="chat-avatar-file" accept="image/*" style="display: none;">
-              <button type="button" id="btn-upload-chat-avatar" class="btn btn-secondary" style="width: 40px; padding: 0; font-size: 0.8rem; height: 36px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="17 8 12 3 7 8"></polyline>
-                  <line x1="12" y1="3" x2="12" y2="15"></line>
-                </svg>
-              </button>
-            </div>
+            <label class="form-label" for="chat-title-input" style="font-size: 0.8rem; margin-bottom: 4px;">Tên nhóm trò chuyện</label>
+            <input type="text" id="chat-title-input" class="form-input" placeholder="Nhập tên nhóm..." style="font-size: 0.85rem; padding: 8px 12px; height: 36px;">
           </div>
           <button type="submit" class="btn btn-primary" style="margin-top: 5px; width: 100%; padding: 10px; font-size: 0.85rem; height: 38px; display: flex; align-items: center; justify-content: center;">
             Tạo nhóm trò chuyện
@@ -1061,43 +1061,20 @@ export const UsersView = {
         </form>
       `;
 
-      // Upload file logic
+      // Select file logic
       const uploadBtn = creationPanel.querySelector('#btn-upload-chat-avatar');
       const fileInput = creationPanel.querySelector('#chat-avatar-file');
-      const avatarUrlInput = creationPanel.querySelector('#chat-avatar-input');
+      const avatarPreview = creationPanel.querySelector('#chat-avatar-preview');
 
-      if (uploadBtn && fileInput && avatarUrlInput) {
+      this.selectedGroupAvatarFile = null;
+
+      if (uploadBtn && fileInput && avatarPreview) {
         uploadBtn.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', async () => {
+        fileInput.addEventListener('change', () => {
           if (fileInput.files.length === 0) return;
           const file = fileInput.files[0];
-
-          uploadBtn.disabled = true;
-          uploadBtn.innerHTML = '<div class="spinner-sm" style="margin: 0; width: 12px; height: 12px;"></div>';
-
-          try {
-            const res = await api.uploadImage(file, 'avatars');
-            if (res && res.success && res.data) {
-              avatarUrlInput.value = res.data.publicUrl || res.data.url;
-            } else {
-              await showDialog({
-                title: 'Lỗi tải ảnh',
-                message: res?.message || 'Không thể tải ảnh đại diện lên.',
-                type: 'error'
-              });
-            }
-          } catch (err) {
-            console.error(err);
-          } finally {
-            uploadBtn.disabled = false;
-            uploadBtn.innerHTML = `
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="17 8 12 3 7 8"></polyline>
-                <line x1="12" y1="3" x2="12" y2="15"></line>
-              </svg>
-            `;
-          }
+          this.selectedGroupAvatarFile = file;
+          avatarPreview.src = URL.createObjectURL(file);
         });
       }
 
@@ -1128,28 +1105,6 @@ export const UsersView = {
     const selectedUserIds = Array.from(this.selectedUsersForChat.keys()).map(id => Number(id));
     if (selectedUserIds.length === 0) return;
 
-    let title = null;
-    let conversationAvatar = null;
-
-    if (isGroup) {
-      const titleInput = document.getElementById('chat-title-input');
-      const avatarInput = document.getElementById('chat-avatar-input');
-
-      title = titleInput ? titleInput.value.trim() : '';
-      if (!title) {
-        await showDialog({
-          title: 'Lỗi nhập dữ liệu',
-          message: 'Vui lòng nhập tên nhóm trò chuyện.',
-          type: 'warning'
-        });
-        return;
-      }
-      conversationAvatar = avatarInput ? avatarInput.value.trim() : null;
-    }
-
-    // Build userConversations array
-    const userConversations = selectedUserIds.map(userId => ({ userId }));
-
     // Show loading overlay
     const overlay = document.getElementById('users-loading-overlay');
     const overlayText = document.getElementById('users-loading-text');
@@ -1161,12 +1116,53 @@ export const UsersView = {
       }
     };
 
+    let title = null;
+    let conversationAvatarUrl = null;
+    let conversationAvatarId = null;
+
+    if (isGroup) {
+      const titleInput = document.getElementById('chat-title-input');
+      title = titleInput ? titleInput.value.trim() || null : null;
+
+      if (this.selectedGroupAvatarFile) {
+        toggleOverlay(true, 'Đang tải ảnh đại diện nhóm...');
+        try {
+          const res = await api.uploadImage(this.selectedGroupAvatarFile, 'avatars');
+          if (res && res.success && res.data) {
+            conversationAvatarUrl = res.data.publicUrl || res.data.url;
+            conversationAvatarId = res.data.publicId || res.data.id;
+          } else {
+            toggleOverlay(false);
+            await showDialog({
+              title: 'Lỗi tải ảnh',
+              message: res?.message || 'Không thể tải ảnh đại diện lên.',
+              type: 'error'
+            });
+            return;
+          }
+        } catch (uploadErr) {
+          toggleOverlay(false);
+          console.error(uploadErr);
+          await showDialog({
+            title: 'Lỗi tải ảnh',
+            message: 'Đã xảy ra lỗi khi tải ảnh đại diện nhóm lên.',
+            type: 'error'
+          });
+          return;
+        }
+      }
+    }
+
+    // Build userConversations array
+    const userConversations = selectedUserIds.map(userId => ({ userId }));
+
     toggleOverlay(true, 'Đang tạo cuộc trò chuyện...');
 
     try {
       const payload = {
         title,
-        conversationAvatar,
+        conversationAvatarUrl,
+        conversationAvatarId,
         group: isGroup,
         userConversations
       };
@@ -1184,6 +1180,8 @@ export const UsersView = {
 
         // Reset Selection state
         this.selectedUsersForChat.clear();
+        this.uploadedGroupAvatarUrl = null;
+        this.uploadedGroupAvatarId = null;
         this.filterAndRenderList(); // Redraw checkbox items
         this.renderSelectedUsers(); // Redraw selection panel
 

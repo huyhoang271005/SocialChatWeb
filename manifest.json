@@ -1,0 +1,23 @@
+{
+  "name": "ChatApp Real-time",
+  "short_name": "ChatApp",
+  "description": "Hệ thống chat real-time hiện đại với giao diện sang trọng, mượt mà và tối ưu trải nghiệm người dùng.",
+  "start_url": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0b10",
+  "theme_color": "#7c3aed",
+  "icons": [
+    {
+      "src": "app_icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "app_icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

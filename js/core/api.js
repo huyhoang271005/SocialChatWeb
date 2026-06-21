@@ -233,9 +233,31 @@ async function request(endpoint, options = {}, alreadyRefreshed = false) {
     }
 
     if (res.status === 403) {
-      setTimeout(() => {
-        window.history.back();
-      }, 5000);
+      const currentHash = window.location.hash;
+      const isPagesWithAccessControl = currentHash === '#roles' || currentHash === '#users';
+
+      const { showDialog } = await import('../shared/dialog/dialog.js');
+
+      if (!window._isShowing403Dialog) {
+        window._isShowing403Dialog = true;
+
+        showDialog({
+          title: 'Không có quyền',
+          message: 'Bạn không có quyền thực hiện hành động này hoặc truy cập trang này.',
+          type: 'error',
+          buttons: [{ text: 'Đồng ý', type: 'primary', value: true }]
+        }).then(() => {
+          window._isShowing403Dialog = false;
+          if (isPagesWithAccessControl) {
+            window.history.back();
+          }
+        }).catch(() => {
+          window._isShowing403Dialog = false;
+          if (isPagesWithAccessControl) {
+            window.history.back();
+          }
+        });
+      }
     }
 
     if (res.status === 503) {

@@ -1,12 +1,33 @@
 import { api } from '../../../js/core/api.js';
 
 export const MessageLoader = {
-  async loadMessages(ctx, conversationId, nextPage = false) {
+  async loadMessages(ctx, conversationId, nextPage = false, forceRefresh = false) {
     if (ctx.messagesLoading) return;
+    if (nextPage && ctx.hasMoreMessages === false) return;
     ctx.messagesLoading = true;
 
     const cacheKey = `chat_messages_cache_${conversationId}`;
     const msgContainer = document.getElementById('chat-messages-container');
+
+    // Load from cache if not nextPage and not forceRefresh
+    if (!nextPage && !forceRefresh) {
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        try {
+          ctx.messages = JSON.parse(cached);
+          ctx.messagesPage = 0;
+          ctx.resolveMessagesSeenStatus(conversationId);
+          ctx.renderMessages();
+          ctx.messagesLoading = false;
+          if (msgContainer) {
+            msgContainer.scrollTop = msgContainer.scrollHeight;
+          }
+          return;
+        } catch (e) {
+          console.warn('Failed to parse cached messages:', e);
+        }
+      }
+    }
 
     try {
       let page = nextPage ? (ctx.messagesPage || 0) + 1 : 0;
@@ -18,7 +39,7 @@ export const MessageLoader = {
         lastId = oldestMsg.id || '';
       }
 
-      let url = `messages/${conversationId}?page=${page}&size=${size}`;
+      let url = `messages/${conversationId}?size=${size}`;
       if (lastId) {
         url += `&lastId=${lastId}`;
       }
@@ -46,11 +67,22 @@ export const MessageLoader = {
           return {
             id: msg.messageId || msg.id,
             sender: String(senderId) === String(currentUserId) ? 'me' : 'them',
+            senderId: senderId,
             text: isRevoked ? 'Tin nhắn đã bị thu hồi' : (msg.text || msg.message || ''),
             type: msg.type || 'TEXT',
-            time: new Date(msg.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+            time: (() => {
+              if (!msg.createdAt) return new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+              const d = new Date(msg.createdAt);
+              return !isNaN(d.getTime()) 
+                ? d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+                : String(msg.createdAt);
+            })(),
             status: 'sent',
-            isRevoked: isRevoked
+            isRevoked: isRevoked,
+            replyMessageId: msg.replyMessageId || null,
+            replyText: msg.replyText || null,
+            replyType: msg.replyType || null,
+            replyRevoked: msg.replyRevoked === true
           };
         });
 

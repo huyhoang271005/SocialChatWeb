@@ -54,7 +54,7 @@ export function renderConversationsList(conversations, activeConversationId, get
     const isActive = String(convo.conversationId) === String(activeConversationId);
 
     // Avatar
-    let avatarUrl = convo.conversationAvatar;
+    let avatarUrl = convo.conversationAvatarUrl;
     if (!avatarUrl) {
       avatarUrl = convo.group ? defaultGroupAvatar : defaultUserAvatar;
     }
@@ -67,10 +67,16 @@ export function renderConversationsList(conversations, activeConversationId, get
     if (!displayTitle) {
       if (!convo.group) {
         const otherParticipant = convo.userConversations?.find(u => String(u.userId) !== String(currentUserId));
-        const otherUserId = otherParticipant ? otherParticipant.userId : null;
-        if (otherUserId) {
-          displayTitle = 'Đang tải...';
-          getUserNameAndAvatarCallback(otherUserId, elementUniqueId, avatarUniqueId);
+        if (otherParticipant) {
+          displayTitle = otherParticipant.fullName ||
+                         otherParticipant.user?.fullName ||
+                         otherParticipant.displayName ||
+                         otherParticipant.username ||
+                         otherParticipant.user?.username ||
+                         'Người dùng';
+          if (otherParticipant.avatarUrl || otherParticipant.user?.avatarUrl) {
+            avatarUrl = otherParticipant.avatarUrl || otherParticipant.user.avatarUrl;
+          }
         } else {
           displayTitle = 'Trò chuyện #' + convo.conversationId;
         }

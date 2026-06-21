@@ -69,7 +69,7 @@ export async function getFCMToken() {
     }
 
     // Đăng ký Service Worker với type: 'module' để có thể import trực tiếp CONFIG
-    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+    const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js', {
       type: 'module'
     });
 
@@ -140,4 +140,39 @@ export function getCurrentFirebaseToken() {
   });
 }
 
+/**
+ * Hiển thị thông báo native trên trình duyệt
+ * @param {string} title Tiêu đề thông báo
+ * @param {string} body Nội dung thông báo
+ * @param {string} conversationId ID cuộc trò chuyện để điều hướng khi click
+ * @param {string} messageId ID tin nhắn (làm tag để tránh trùng lặp)
+ */
+export function showNativeNotification(title, body, conversationId, messageId) {
+  if (Notification.permission !== 'granted') {
+    return;
+  }
 
+  const tag = messageId || `msg-${Date.now()}`;
+  const options = {
+    body: body,
+    icon: '/favicon.ico',
+    badge: '/favicon.ico',
+    tag: tag,
+    data: {
+      click_action: `${window.location.origin}/#home?conversationId=${conversationId}`
+    }
+  };
+
+  if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
+    navigator.serviceWorker.ready.then((registration) => {
+      registration.showNotification(title, options);
+    });
+  } else {
+    const notification = new Notification(title, options);
+    notification.onclick = (event) => {
+      event.preventDefault();
+      window.focus();
+      window.location.hash = `#home?conversationId=${conversationId}`;
+    };
+  }
+}

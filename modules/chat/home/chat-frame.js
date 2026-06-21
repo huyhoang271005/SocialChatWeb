@@ -1,9 +1,12 @@
 import { socket } from '../../../js/core/websocket.js';
 import { api } from '../../../js/core/api.js';
 
-export function renderMessages(messages, conversationId) {
+export function renderMessages(messages, conversationId, conversations = []) {
   const msgContainer = document.getElementById('chat-messages-container');
   if (!msgContainer) return;
+
+  const convo = conversations.find(c => String(c.conversationId) === String(conversationId));
+  const isGroup = convo ? convo.group === true : false;
 
   const lastOutgoingIndex = messages.map(m => m.sender).lastIndexOf('me');
 
@@ -24,6 +27,47 @@ export function renderMessages(messages, conversationId) {
     const isFailed = msg.status === 'failed';
     const bubbleClass = `message-bubble message-${isOutgoing ? 'outgoing' : 'incoming'} ${isPending ? 'message-pending' : ''} ${isFailed ? 'message-failed' : ''} ${msg.isRevoked ? 'message-revoked' : ''}`;
     
+    let replyQuoteHtml = '';
+    if (msg.replyMessageId) {
+      const replyId = msg.replyMessageId;
+      const orig = messages.find(m => String(m.id) === String(replyId));
+      let senderName = 'Người dùng';
+      
+      const currentUserId = localStorage.getItem('chat_user_id') || 'user_me';
+      if (orig) {
+        if (String(orig.senderId) === String(currentUserId)) {
+          senderName = 'Bạn';
+        } else {
+          const senderObj = convo?.userConversations?.find(u => String(u.userId) === String(orig.senderId));
+          senderName = senderObj ? (senderObj.fullName || senderObj.displayName || senderObj.username || 'Thành viên') : 'Thành viên';
+        }
+      } else {
+        senderName = 'Tin nhắn';
+      }
+
+      let textSnippet = msg.replyText || '';
+      if (msg.replyRevoked === true) {
+        textSnippet = 'Tin nhắn đã bị thu hồi';
+      } else {
+        const replyType = String(msg.replyType || 'TEXT').toUpperCase();
+        if (replyType === 'IMAGE') textSnippet = '[Hình ảnh]';
+        else if (replyType === 'VIDEO') textSnippet = '[Video]';
+        else if (replyType === 'AUDIO') textSnippet = '[Tin nhắn thoại]';
+        else if (replyType === 'FILE') textSnippet = '[Tài liệu]';
+      }
+
+      replyQuoteHtml = `
+        <div class="replied-message-quote" data-target-id="${replyId}" style="display: flex; flex-direction: column; align-items: flex-start; justify-content: center; text-align: left; width: 100%; box-sizing: border-box; gap: 2px; margin-bottom: 6px;">
+          <div style="font-weight: 600; font-size: 0.75rem; color: ${isOutgoing ? 'rgba(255, 255, 255, 0.9)' : 'var(--accent-color)'}; text-align: left; align-self: flex-start; margin: 0; padding: 0; width: auto; max-width: 100%; word-break: break-all; display: block;">
+            ${senderName}
+          </div>
+          <div style="opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; text-align: left; align-self: flex-start; margin: 0; padding: 0; width: auto; display: block;">
+            ${textSnippet}
+          </div>
+        </div>
+      `;
+    }
+
     let contentHtml = msg.text || '';
     if (!msg.isRevoked) {
       const msgType = String(msg.type || 'TEXT').toUpperCase();
@@ -48,40 +92,164 @@ export function renderMessages(messages, conversationId) {
       } else if (msg.status === 'sent') {
         statusTextHtml = `<div class="message-status" style="font-size: 0.75rem; color: var(--text-secondary); align-self: flex-end; margin-top: 2px; margin-right: 4px;">Đã gửi</div>`;
       } else if (msg.status === 'seen') {
-        statusTextHtml = `<div class="message-status" style="font-size: 0.75rem; color: var(--accent-color); align-self: flex-end; margin-top: 2px; margin-right: 4px; font-weight: 500;">Đã xem</div>`;
+        const convo = conversations.find(c => String(c.conversationId) === String(conversationId));
+        let seenNames = [];
+        const currentUserId = localStorage.getItem('chat_user_id') || 'user_me';
+        if (convo && convo.userConversations) {
+          const otherParticipants = convo.userConversations.filter(u => String(u.userId) !== String(currentUserId));
+          const seenParticipants = otherParticipants.filter(p => {
+            const seenId = p.lastMessageId;
+            if (!seenId) return false;
+            
+            const msgId = msg.id;
+            if (!isNaN(msgId) && !isNaN(seenId)) {
+              return Number(msgId) <= Number(seenId);
+            }
+            return String(msgId) === String(seenId);
+          });
+
+          // Sắp xếp theo seenAt giảm dần, đưa người xem mới nhất lên đầu
+          seenParticipants.sort((a, b) => {
+            const timeA = a.seenAt || 0;
+            const timeB = b.seenAt || 0;
+            return timeB - timeA;
+          });
+
+          seenNames = seenParticipants.map(p => p.fullName || p.username || 'Ai đó');
+        }
+        const seenText = seenNames.length > 0 ? `${seenNames.join(', ')} đã xem` : 'Đã xem';
+        statusTextHtml = `<div class="message-status" style="font-size: 0.75rem; color: var(--accent-color); align-self: flex-end; margin-top: 2px; margin-right: 4px; font-weight: 500;">${seenText}</div>`;
       } else if (isFailed) {
         statusTextHtml = `<div class="message-status" style="font-size: 0.75rem; color: #ef4444; align-self: flex-end; margin-top: 2px; margin-right: 4px; font-weight: 500;">Gửi lỗi</div>`;
       }
     }
 
+    const displayOptions = !isPending && !isFailed && !msg.isRevoked;
+
+    if (isGroup && !isOutgoing) {
+      let senderName = '';
+      let senderAvatar = '';
+      const defaultUserAvatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&h=100';
+
+      const senderObj = convo?.userConversations?.find(u => String(u.userId) === String(msg.senderId));
+      if (senderObj) {
+        senderName = senderObj.fullName ||
+                     senderObj.user?.fullName ||
+                     senderObj.displayName ||
+                     senderObj.username ||
+                     senderObj.user?.username ||
+                     'Thành viên';
+        senderAvatar = senderObj.avatarUrl || senderObj.user?.avatarUrl || defaultUserAvatar;
+      } else {
+        senderName = 'Thành viên';
+        senderAvatar = defaultUserAvatar;
+      }
+
+      const optionsHtml = displayOptions ? `
+        <div class="message-options-dropdown">
+          <button class="btn-message-options" data-id="${msg.id}" title="Tuỳ chọn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="1.5"></circle>
+              <circle cx="12" cy="5" r="1.5"></circle>
+              <circle cx="12" cy="19" r="1.5"></circle>
+            </svg>
+          </button>
+          <div class="message-dropdown-menu" id="dropdown-${msg.id}" style="display: none; ${isOutgoing ? '' : 'left: 0; right: auto;'}">
+            <button class="dropdown-item btn-reply-message" data-id="${msg.id}">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; color: var(--accent-color);">
+                <polyline points="9 17 4 12 9 7"></polyline>
+                <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
+              </svg>
+              <span>Trả lời</span>
+            </button>
+            ${isOutgoing ? `
+              <button class="dropdown-item btn-revoke-message" data-id="${msg.id}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; color: var(--error);">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="15" y1="9" x2="9" y2="15"></line>
+                  <line x1="9" y1="9" x2="15" y2="15"></line>
+                </svg>
+                <span style="color: var(--error);">Thu hồi</span>
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      ` : '';
+
+      const swipeIndicatorHtml = `
+        <div class="swipe-reply-indicator" style="position: absolute; ${isOutgoing ? 'right: -40px;' : 'left: -40px;'} display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: hsla(230, 25%, 20%, 0.5); opacity: 0; transform: scale(0.5); transition: opacity 0.2s, transform 0.2s, ${isOutgoing ? 'right' : 'left'} 0.2s; color: var(--accent-color); pointer-events: none;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 17 4 12 9 7"></polyline>
+            <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
+          </svg>
+        </div>
+      `;
+
+      const groupBubbleHtml = `<div class="${bubbleClass}" data-id="${msg.id}" style="max-width: 100%;">${replyQuoteHtml}${contentHtml}<div style="font-size: 0.7rem; text-align: right; opacity: 0.7; margin-top: 4px; white-space: normal;">${msg.time}</div></div>`;
+
+      return `
+        <div class="message-row group-incoming-row" id="msg-${msg.id}">
+          <img src="${senderAvatar}" class="message-sender-avatar" alt="${senderName}" title="${senderName}">
+          <div style="display: flex; flex-direction: column; align-items: flex-start; max-width: 65%;">
+            <span class="message-sender-name">${senderName}</span>
+            <div style="display: flex; align-items: center; gap: 8px; justify-content: flex-start; width: 100%; position: relative;" class="message-bubble-wrapper">
+              ${swipeIndicatorHtml}
+              ${groupBubbleHtml}
+              ${optionsHtml}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     const rowAlign = isOutgoing ? 'align-items: flex-end;' : 'align-items: flex-start;';
-    const displayOptions = isOutgoing && !isPending && !isFailed && !msg.isRevoked;
+    const optionsHtml = displayOptions ? `
+      <div class="message-options-dropdown">
+        <button class="btn-message-options" data-id="${msg.id}" title="Tuỳ chọn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="1.5"></circle>
+            <circle cx="12" cy="5" r="1.5"></circle>
+            <circle cx="12" cy="19" r="1.5"></circle>
+          </svg>
+        </button>
+        <div class="message-dropdown-menu" id="dropdown-${msg.id}" style="display: none; ${isOutgoing ? '' : 'left: 0; right: auto;'}">
+          <button class="dropdown-item btn-reply-message" data-id="${msg.id}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; color: var(--accent-color);">
+              <polyline points="9 17 4 12 9 7"></polyline>
+              <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
+            </svg>
+            <span>Trả lời</span>
+          </button>
+          ${isOutgoing ? `
+            <button class="dropdown-item btn-revoke-message" data-id="${msg.id}">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; color: var(--error);">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="15" y1="9" x2="9" y2="15"></line>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
+              </svg>
+              <span style="color: var(--error);">Thu hồi</span>
+            </button>
+          ` : ''}
+        </div>
+      </div>
+    ` : '';
+
+    const swipeIndicatorHtml = `
+      <div class="swipe-reply-indicator" style="position: absolute; ${isOutgoing ? 'right: -40px;' : 'left: -40px;'} display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: hsla(230, 25%, 20%, 0.5); opacity: 0; transform: scale(0.5); transition: opacity 0.2s, transform 0.2s, ${isOutgoing ? 'right' : 'left'} 0.2s; color: var(--accent-color); pointer-events: none;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 17 4 12 9 7"></polyline>
+          <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
+        </svg>
+      </div>
+    `;
+
+    const bubbleHtml = `<div class="${bubbleClass}" data-id="${msg.id}">${replyQuoteHtml}${contentHtml}<div style="font-size: 0.7rem; text-align: right; opacity: 0.7; margin-top: 4px; white-space: normal;">${msg.time}</div></div>`;
 
     return `
-      <div class="message-row" style="display: flex; flex-direction: column; ${rowAlign} width: 100%;">
+      <div class="message-row" id="msg-${msg.id}" style="display: flex; flex-direction: column; ${rowAlign} width: 100%;">
         <div style="display: flex; align-items: center; gap: 8px; justify-content: ${isOutgoing ? 'flex-end' : 'flex-start'}; width: 100%; position: relative;" class="message-bubble-wrapper">
-          ${displayOptions ? `
-            <div class="message-options-dropdown">
-              <button class="btn-message-options" data-id="${msg.id}" title="Tuỳ chọn">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="1.5"></circle>
-                  <circle cx="12" cy="5" r="1.5"></circle>
-                  <circle cx="12" cy="19" r="1.5"></circle>
-                </svg>
-              </button>
-              <div class="message-dropdown-menu" id="dropdown-${msg.id}" style="display: none;">
-                <button class="dropdown-item btn-revoke-message" data-id="${msg.id}">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; color: var(--error);">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="15" y1="9" x2="9" y2="15"></line>
-                    <line x1="9" y1="9" x2="15" y2="15"></line>
-                  </svg>
-                  <span style="color: var(--error);">Thu hồi</span>
-                </button>
-              </div>
-            </div>
-          ` : ''}
-          <div class="${bubbleClass}">${contentHtml}<div style="font-size: 0.7rem; text-align: right; opacity: 0.7; margin-top: 4px; white-space: normal;">${msg.time}</div></div>
+          ${swipeIndicatorHtml}
+          ${isOutgoing ? `${optionsHtml}${bubbleHtml}` : `${bubbleHtml}${optionsHtml}`}
         </div>
         ${statusTextHtml}
       </div>
@@ -121,6 +289,36 @@ export function renderMessages(messages, conversationId) {
       setTimeout(() => {
         document.addEventListener('click', documentClickListener);
       }, 0);
+    });
+  });
+
+  // Bind click event on reply buttons in dropdown
+  const replyButtons = msgContainer.querySelectorAll('.btn-reply-message');
+  replyButtons.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const messageId = btn.dataset.id;
+      
+      // Close dropdown immediately
+      const dropdown = document.getElementById(`dropdown-${messageId}`);
+      if (dropdown) dropdown.style.display = 'none';
+
+      // Dispatch custom event
+      const event = new CustomEvent('reply-message-click', { detail: { messageId } });
+      document.dispatchEvent(event);
+    });
+  });
+
+  // Bind click event on replied message quote to scroll
+  const quotes = msgContainer.querySelectorAll('.replied-message-quote');
+  quotes.forEach(quote => {
+    quote.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const targetId = quote.dataset.targetId;
+      if (targetId) {
+        const event = new CustomEvent('reply-quote-click', { detail: { targetId } });
+        document.dispatchEvent(event);
+      }
     });
   });
 
@@ -177,10 +375,7 @@ export function updateChatHeader(title, avatarUrl, statusText, conversationId = 
   const backBtn = partnerInfo.querySelector('#btn-back-to-list');
   if (backBtn) {
     backBtn.addEventListener('click', () => {
-      const dashboard = document.querySelector('.chat-dashboard');
-      if (dashboard) {
-        dashboard.classList.remove('show-chat');
-      }
+      window.location.hash = 'home';
     });
   }
 
@@ -225,6 +420,13 @@ export function updateChatHeader(title, avatarUrl, statusText, conversationId = 
               Thành viên nhóm
             </button>
             ${convo?.group ? `
+            <button class="dropdown-item" id="option-edit-convo">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+              Chỉnh sửa nhóm
+            </button>
             <button class="dropdown-item" id="option-leave-convo">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--error);">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -276,6 +478,15 @@ export function updateChatHeader(title, avatarUrl, statusText, conversationId = 
         });
       }
 
+      const optEditConvo = headerActions.querySelector('#option-edit-convo');
+      if (optEditConvo) {
+        optEditConvo.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (dropdown) dropdown.style.display = 'none';
+          showEditConversationModal(conversationId, conversations);
+        });
+      }
+
       const optLeaveConvo = headerActions.querySelector('#option-leave-convo');
       if (optLeaveConvo) {
         optLeaveConvo.addEventListener('click', async (e) => {
@@ -294,7 +505,27 @@ export function updateChatHeader(title, avatarUrl, statusText, conversationId = 
           });
 
           if (confirm) {
-            socket.sendLeaveConversation(conversationId);
+            try {
+              let res = await api.delete('conversations/member/leave', { conversationId });
+              if (!res || !res.success) {
+                res = await api.delete('conversation/member/leave', { conversationId });
+              }
+              if (res && res.success) {
+                await showDialog({
+                  title: 'Thành công',
+                  message: 'Bạn đã rời nhóm thành công.',
+                  type: 'success'
+                });
+              } else {
+                throw new Error(res?.message || 'Không thể rời nhóm');
+              }
+            } catch (err) {
+              await showDialog({
+                title: 'Lỗi thực hiện',
+                message: err.message || 'Không thể rời cuộc trò chuyện.',
+                type: 'error'
+              });
+            }
           }
         });
       }
@@ -386,13 +617,40 @@ function showAddMemberModal(conversationId, conversations) {
   overlay.querySelector('#btn-close-add-modal').addEventListener('click', closeModal);
   overlay.querySelector('#btn-cancel-add-member').addEventListener('click', closeModal);
 
-  overlay.querySelector('#btn-confirm-add-member').addEventListener('click', () => {
+  overlay.querySelector('#btn-confirm-add-member').addEventListener('click', async () => {
     if (selectedUserIds.size === 0) {
       closeModal();
       return;
     }
-    socket.sendAddMember(conversationId, Array.from(selectedUserIds));
-    closeModal();
+
+    const confirmBtn = overlay.querySelector('#btn-confirm-add-member');
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<div class="spinner-sm" style="margin: 0; width: 14px; height: 14px; border-color: #fff;"></div>';
+
+    try {
+      const userIds = Array.from(selectedUserIds).map(id => Number(id));
+      const res = await api.post('conversations/member', { conversationId, userIds });
+      if (res && res.success) {
+        closeModal();
+        const { showDialog } = await import('../../../js/shared/dialog/dialog.js');
+        await showDialog({
+          title: 'Thành công',
+          message: 'Đã thêm thành viên thành công.',
+          type: 'success'
+        });
+      } else {
+        throw new Error(res?.message || 'Không thể thêm thành viên');
+      }
+    } catch (err) {
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = 'Thêm';
+      const { showDialog } = await import('../../../js/shared/dialog/dialog.js');
+      await showDialog({
+        title: 'Lỗi',
+        message: err.message || 'Đã xảy ra lỗi khi thêm thành viên.',
+        type: 'error'
+      });
+    }
   });
 
   const searchInput = overlay.querySelector('#modal-user-search-input');
@@ -565,6 +823,12 @@ function showViewMembersModal(conversationId, conversations) {
   const overlay = document.createElement('div');
   overlay.className = 'chat-modal-overlay';
 
+  const convo = conversations.find(c => String(c.conversationId) === String(conversationId));
+  const userConversations = convo ? (convo.userConversations || []) : [];
+  const myConvoEntry = userConversations.find(u => String(u.userId) === currentUserId);
+  const myRole = myConvoEntry ? String(myConvoEntry.conversationRole || 'MEMBER').toUpperCase() : 'MEMBER';
+  const canDeleteMember = !convo || !convo.group || myRole === 'CREATOR';
+
   overlay.innerHTML = `
     <div class="chat-modal-card">
       <div class="chat-modal-header">
@@ -576,7 +840,7 @@ function showViewMembersModal(conversationId, conversations) {
           </svg>
         </button>
       </div>
-      <div class="chat-modal-body" id="modal-members-list-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 400px; overflow-y: auto;">
+      <div class="chat-modal-body" id="modal-members-list-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 400px; overflow-y: auto; padding-right: 4px;">
         <!-- Members list -->
       </div>
       <div class="chat-modal-footer">
@@ -627,11 +891,7 @@ function showViewMembersModal(conversationId, conversations) {
       return;
     }
 
-    const myConvoEntry = userConversations.find(u => String(u.userId) === currentUserId);
-    const myRole = myConvoEntry ? String(myConvoEntry.conversationRole || 'MEMBER').toUpperCase() : 'MEMBER';
-    const canDeleteMember = !convo || !convo.group || myRole === 'CREATOR';
-
-    const defaultAvatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150';
+    const defaultAvatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&h=100';
 
     container.innerHTML = userConversations.map(member => {
       const isSelf = String(member.userId) === currentUserId;
@@ -648,8 +908,10 @@ function showViewMembersModal(conversationId, conversations) {
         roleLabel = 'Phó phòng';
       }
 
+      const isDeletable = !isSelf && canDeleteMember;
+
       return `
-        <div class="member-list-item" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: hsla(230, 25%, 6%, 0.25);">
+        <div class="member-list-item" data-id="${member.userId}" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: hsla(230, 25%, 6%, 0.25); cursor: default; transition: var(--transition-smooth);">
           <div style="display: flex; align-items: center; gap: 10px;">
             <img src="${avatarUrl}" class="conversation-avatar" style="width: 36px; height: 36px; border-radius: 50%;" alt="${member.fullName || ''}">
             <div style="display: flex; flex-direction: column; gap: 4px;">
@@ -660,16 +922,14 @@ function showViewMembersModal(conversationId, conversations) {
               <span style="font-size: 0.75rem; color: var(--text-muted);">@${member.username || 'chưa_có'}</span>
             </div>
           </div>
-          ${(isSelf || !canDeleteMember) ? '' : `
-          <button class="btn-delete-member" data-id="${member.userId}" title="Xóa khỏi cuộc trò chuyện" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 6px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; transition: var(--transition-smooth);">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          ${isDeletable ? `
+          <button class="btn-delete-member" data-id="${member.userId}" title="Xóa thành viên" style="background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; transition: all 0.2s ease; padding: 0;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--error);">
               <polyline points="3 6 5 6 21 6"></polyline>
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-              <line x1="10" y1="11" x2="10" y2="17"></line>
-              <line x1="14" y1="11" x2="14" y2="17"></line>
             </svg>
           </button>
-          `}
+          ` : ''}
         </div>
       `;
     }).join('');
@@ -678,13 +938,14 @@ function showViewMembersModal(conversationId, conversations) {
     deleteButtons.forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
-        const targetUserId = btn.dataset.id;
-        const memberName = btn.closest('.member-list-item').querySelector('span').textContent.replace(' (Bạn)', '').trim();
+        const userId = btn.dataset.id;
+        const memberObj = userConversations.find(u => String(u.userId) === String(userId));
+        const memberName = memberObj?.fullName || memberObj?.user?.fullName || memberObj?.displayName || memberObj?.username || 'Thành viên';
 
         const { showDialog } = await import('../../../js/shared/dialog/dialog.js');
         const confirm = await showDialog({
           title: 'Xóa thành viên',
-          message: `Bạn có chắc chắn muốn xóa ${memberName} khỏi cuộc trò chuyện này không?`,
+          message: `Bạn có chắc chắn muốn xóa thành viên "${memberName}" khỏi cuộc trò chuyện này không?`,
           type: 'warning',
           buttons: [
             { text: 'Hủy', type: 'secondary', value: false },
@@ -693,9 +954,222 @@ function showViewMembersModal(conversationId, conversations) {
         });
 
         if (confirm) {
-          socket.sendDeleteMember(conversationId, [targetUserId]);
+          btn.disabled = true;
+          btn.innerHTML = '<div class="spinner-sm" style="margin: 0; width: 14px; height: 14px; border-color: #fff;"></div>';
+
+          try {
+            const res = await api.delete(`conversations/${conversationId}/member/${userId}`);
+
+            if (res && res.success) {
+              if (convo && convo.userConversations) {
+                convo.userConversations = convo.userConversations.filter(u => String(u.userId) !== String(userId));
+              }
+              renderMembersList();
+              await showDialog({
+                title: 'Thành công',
+                message: `Đã xóa thành viên "${memberName}" khỏi nhóm.`,
+                type: 'success'
+              });
+            } else {
+              throw new Error(res?.message || 'Không thể xóa thành viên');
+            }
+          } catch (err) {
+            btn.disabled = false;
+            btn.innerHTML = `
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--error);">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            `;
+            await showDialog({
+              title: 'Lỗi',
+              message: err.message || 'Đã xảy ra lỗi khi xóa thành viên.',
+              type: 'error'
+            });
+          }
         }
       });
     });
   }
+}
+
+function showEditConversationModal(conversationId, conversations) {
+  const convo = conversations.find(c => String(c.conversationId) === String(conversationId));
+  if (!convo) return;
+
+  const defaultGroupAvatar = 'https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?auto=format&fit=crop&w=100&h=100';
+  const currentTitle = convo.title || 'Nhóm trò chuyện #' + convo.conversationId;
+  const currentAvatar = convo.conversationAvatarUrl || defaultGroupAvatar;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'chat-modal-overlay';
+
+  overlay.innerHTML = `
+    <div class="chat-modal-card">
+      <div class="chat-modal-header">
+        <h3>Chỉnh sửa cuộc trò chuyện</h3>
+        <button class="btn-close-modal" id="btn-close-edit-modal">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="chat-modal-body">
+        <form id="edit-chat-form" class="admin-form-layout" style="display: flex; flex-direction: column; gap: 15px;">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 10px;">
+            <div style="position: relative; width: 80px; height: 80px; border-radius: 50%; overflow: hidden; border: 2px solid var(--border-color); background: hsla(230, 25%, 15%, 0.45);">
+              <img id="edit-avatar-preview" src="${currentAvatar}" style="width: 100%; height: 100%; object-fit: cover;" alt="Preview">
+            </div>
+            <input type="file" id="edit-chat-avatar-file" accept="image/*" style="display: none;">
+            <button type="button" id="btn-upload-edit-avatar" class="btn btn-secondary" style="font-size: 0.8rem; padding: 6px 12px; height: 32px; display: flex; align-items: center; justify-content: center; gap: 6px; width: auto;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+              </svg>
+              Chọn ảnh đại diện
+            </button>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="edit-chat-title-input" style="font-size: 0.8rem; margin-bottom: 4px;">Tên nhóm trò chuyện</label>
+            <input type="text" id="edit-chat-title-input" class="form-input" placeholder="Nhập tên nhóm..." value="${currentTitle}" style="font-size: 0.85rem; padding: 8px 12px; height: 38px;">
+          </div>
+        </form>
+      </div>
+      <div class="chat-modal-footer">
+        <button class="btn btn-secondary" id="btn-cancel-edit-convo">Hủy</button>
+        <button class="btn btn-primary" id="btn-confirm-edit-convo">Lưu thay đổi</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  setTimeout(() => {
+    overlay.classList.add('active');
+  }, 10);
+
+  const closeModal = () => {
+    overlay.classList.remove('active');
+    overlay.addEventListener('transitionend', () => {
+      overlay.remove();
+    }, { once: true });
+  };
+
+  overlay.querySelector('#btn-close-edit-modal').addEventListener('click', closeModal);
+  overlay.querySelector('#btn-cancel-edit-convo').addEventListener('click', closeModal);
+
+  const titleInput = overlay.querySelector('#edit-chat-title-input');
+  const fileInput = overlay.querySelector('#edit-chat-avatar-file');
+  const uploadBtn = overlay.querySelector('#btn-upload-edit-avatar');
+  const previewImg = overlay.querySelector('#edit-avatar-preview');
+  const saveBtn = overlay.querySelector('#btn-confirm-edit-convo');
+
+  let selectedFile = null;
+
+  // File selection
+  if (uploadBtn && fileInput) {
+    uploadBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length === 0) return;
+      const file = fileInput.files[0];
+      selectedFile = file;
+      previewImg.src = URL.createObjectURL(file);
+    });
+  }
+
+  // Save changes logic
+  saveBtn.addEventListener('click', async () => {
+    const newTitle = titleInput.value.trim() || null;
+
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<div class="spinner-sm" style="margin: 0; width: 14px; height: 14px; border-color: #fff;"></div>';
+
+    let finalAvatarUrl = convo.conversationAvatarUrl || null;
+    let finalAvatarId = convo.conversationAvatarId || null;
+
+    if (selectedFile) {
+      try {
+        const res = await api.uploadImage(selectedFile, 'avatars');
+        if (res && res.success && res.data) {
+          finalAvatarUrl = res.data.publicUrl || res.data.url;
+          finalAvatarId = res.data.publicId || res.data.id;
+        } else {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = 'Lưu thay đổi';
+          const { showDialog } = await import('../../../js/shared/dialog/dialog.js');
+          await showDialog({
+            title: 'Lỗi tải ảnh',
+            message: res?.message || 'Không thể tải ảnh đại diện lên.',
+            type: 'error'
+          });
+          return;
+        }
+      } catch (uploadErr) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = 'Lưu thay đổi';
+        console.error(uploadErr);
+        const { showDialog } = await import('../../../js/shared/dialog/dialog.js');
+        await showDialog({
+          title: 'Lỗi tải ảnh',
+          message: 'Đã xảy ra lỗi khi tải ảnh đại diện nhóm lên.',
+          type: 'error'
+        });
+        return;
+      }
+    }
+
+    const payload = {
+      conversationId: convo.conversationId,
+      title: newTitle,
+      conversationAvatarUrl: finalAvatarUrl,
+      conversationAvatarId: finalAvatarId
+    };
+
+    try {
+      const response = await api.put('conversations', payload);
+      const success = response && response.success;
+
+      if (success) {
+        const { showDialog } = await import('../../../js/shared/dialog/dialog.js');
+        await showDialog({
+          title: 'Thành công',
+          message: 'Đã cập nhật thông tin nhóm thành công.',
+          type: 'success',
+          buttons: [{ text: 'Đóng', type: 'primary', value: true }]
+        });
+
+        convo.title = newTitle;
+        convo.conversationAvatarUrl = finalAvatarUrl;
+        convo.conversationAvatarId = finalAvatarId;
+
+        document.dispatchEvent(new CustomEvent('refresh-conversations'));
+
+        updateChatHeader(
+          newTitle,
+          finalAvatarUrl || defaultGroupAvatar,
+          'Nhóm trò chuyện',
+          convo.conversationId,
+          conversations
+        );
+
+        closeModal();
+      } else {
+        throw new Error(response?.message || 'Không thể cập nhật cuộc trò chuyện');
+      }
+    } catch (err) {
+      console.error(err);
+      const { showDialog } = await import('../../../js/shared/dialog/dialog.js');
+      await showDialog({
+        title: 'Lỗi cập nhật',
+        message: err.message || 'Đã xảy ra lỗi khi cập nhật nhóm trò chuyện.',
+        type: 'error'
+      });
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = 'Lưu thay đổi';
+    }
+  });
 }

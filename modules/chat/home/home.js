@@ -1,7 +1,6 @@
 import { showDialog } from '../../../js/shared/dialog/dialog.js';
 import { api } from '../../../js/core/api.js';
 import { socket } from '../../../js/core/websocket.js';
-import { showIncomingMessageToast } from './toast.js';
 import { renderMessages, updateChatHeader, renderEmptyChatFrame } from './chat-frame.js';
 import { renderConversationsList } from './conversations.js';
 import { AttachmentHandler } from './attachment-handler.js';
@@ -110,6 +109,9 @@ export const HomeView = {
             <!-- Staged Files Preview Area -->
             <div id="staged-files-container" class="staged-files-container" style="display: none;"></div>
 
+            <!-- Reply Preview Container -->
+            <div id="reply-preview-container" class="reply-preview-container" style="display: none;"></div>
+
             <!-- Voice Recording Indicator -->
             <div id="voice-recording-indicator" class="voice-recording-indicator" style="display: none; align-items: center; justify-content: center;">
               <span class="voice-recording-dot"></span>
@@ -196,6 +198,165 @@ export const HomeView = {
     const messageInput = document.getElementById('message-input');
     const sendBtn = document.getElementById('btn-send-message');
 
+
+
+    // Reset reply state
+    this.clearReplyState();
+
+    // Listen to reply custom events
+    this.replyClickListener = (e) => {
+      const messageId = e.detail.messageId;
+      const msg = this.messages.find(m => String(m.id) === String(messageId));
+      if (msg) {
+        this.showReplyPreview(msg);
+      }
+    };
+    document.addEventListener('reply-message-click', this.replyClickListener);
+
+    this.replyQuoteClickListener = (e) => {
+      const targetId = e.detail.targetId;
+      this.scrollToAndHighlightMessage(targetId);
+    };
+    document.addEventListener('reply-quote-click', this.replyQuoteClickListener);
+
+    // Event delegation touch gestures for mobile swipe-to-reply
+    const msgContainer = document.getElementById('chat-messages-container');
+    if (msgContainer) {
+      let touchStart = null;
+      let touchElement = null;
+      let touchIndicator = null;
+      let isSwiping = false;
+
+      this.msgTouchStartListener = (e) => {
+        const bubble = e.target.closest('.message-bubble');
+        if (!bubble || bubble.classList.contains('message-revoked')) return;
+        
+        if (e.target.closest('a') || e.target.closest('button') || e.target.closest('img') || e.target.closest('video') || e.target.closest('audio')) {
+          return;
+        }
+
+        const touch = e.touches[0];
+        touchStart = { x: touch.clientX, y: touch.clientY };
+        touchElement = bubble;
+        
+        const wrapper = bubble.closest('.message-bubble-wrapper');
+        if (wrapper) {
+          touchIndicator = wrapper.querySelector('.swipe-reply-indicator');
+        }
+        isSwiping = false;
+      };
+
+      this.msgTouchMoveListener = (e) => {
+        if (!touchStart || !touchElement) return;
+        const touch = e.touches[0];
+        const diffX = touch.clientX - touchStart.x;
+        const diffY = touch.clientY - touchStart.y;
+
+        if (!isSwiping) {
+          if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 10) {
+            isSwiping = true;
+          } else if (Math.abs(diffY) > 10) {
+            touchStart = null;
+            touchElement = null;
+            touchIndicator = null;
+            return;
+          }
+        }
+
+        if (isSwiping) {
+          const isOutgoing = touchElement.classList.contains('message-outgoing');
+          
+          if (isOutgoing) {
+            // Outgoing message: swipe left (diffX < 0)
+            if (diffX < 0) {
+              if (e.cancelable) e.preventDefault();
+              const translateX = Math.max(diffX, -70);
+              touchElement.style.transform = `translateX(${translateX}px)`;
+              touchElement.style.transition = 'none';
+
+              if (touchIndicator) {
+                const absDiffX = Math.abs(diffX);
+                touchIndicator.style.opacity = Math.min(absDiffX / 50, 1);
+                touchIndicator.style.transform = `scale(${Math.min(0.5 + (absDiffX / 100), 1)})`;
+                touchIndicator.style.left = 'auto';
+                touchIndicator.style.right = `${Math.min(-40 + absDiffX * 0.5, 10)}px`;
+              }
+            }
+          } else {
+            // Incoming message: swipe right (diffX > 0)
+            if (diffX > 0) {
+              if (e.cancelable) e.preventDefault();
+              const translateX = Math.min(diffX, 70);
+              touchElement.style.transform = `translateX(${translateX}px)`;
+              touchElement.style.transition = 'none';
+
+              if (touchIndicator) {
+                touchIndicator.style.opacity = Math.min(diffX / 50, 1);
+                touchIndicator.style.transform = `scale(${Math.min(0.5 + (diffX / 100), 1)})`;
+                touchIndicator.style.right = 'auto';
+                touchIndicator.style.left = `${Math.min(-40 + diffX * 0.5, 10)}px`;
+              }
+            }
+          }
+        }
+      };
+
+      this.msgTouchEndListener = (e) => {
+        if (!touchStart || !touchElement) return;
+
+        const touch = e.changedTouches[0];
+        const diffX = touch.clientX - touchStart.x;
+        const isOutgoing = touchElement.classList.contains('message-outgoing');
+
+        let triggerReply = false;
+        if (isOutgoing) {
+          if (isSwiping && diffX < -50) {
+            triggerReply = true;
+          }
+        } else {
+          if (isSwiping && diffX > 50) {
+            triggerReply = true;
+          }
+        }
+
+        if (triggerReply) {
+          const messageId = touchElement.dataset.id || touchElement.getAttribute('data-id');
+          if (messageId) {
+            if (navigator.vibrate) {
+              navigator.vibrate(15);
+            }
+            const msg = this.messages.find(m => String(m.id) === String(messageId));
+            if (msg) {
+              this.showReplyPreview(msg);
+            }
+          }
+        }
+
+        touchElement.style.transition = 'transform 0.2s ease';
+        touchElement.style.transform = '';
+        
+        if (touchIndicator) {
+          touchIndicator.style.transition = 'opacity 0.2s ease, transform 0.2s ease, left 0.2s ease, right 0.2s ease';
+          touchIndicator.style.opacity = '0';
+          touchIndicator.style.transform = 'scale(0.5)';
+          if (isOutgoing) {
+            touchIndicator.style.right = '-40px';
+          } else {
+            touchIndicator.style.left = '-40px';
+          }
+        }
+
+        touchStart = null;
+        touchElement = null;
+        touchIndicator = null;
+        isSwiping = false;
+      };
+
+      msgContainer.addEventListener('touchstart', this.msgTouchStartListener, { passive: true });
+      msgContainer.addEventListener('touchmove', this.msgTouchMoveListener, { passive: false });
+      msgContainer.addEventListener('touchend', this.msgTouchEndListener, { passive: true });
+    }
+
     // 1. WebSocket: Chỉ subscribe đúng 1 topic duy nhất theo userId của chính mình
     const localUserId = localStorage.getItem('chat_user_id');
     const setupWebSocket = (uid) => {
@@ -243,6 +404,12 @@ export const HomeView = {
     };
     socket.addListener(this.onMessageReceived);
 
+    // Setup listener for custom refresh-conversations event
+    this.refreshConversationsListener = () => {
+      this.renderConversationsList();
+    };
+    document.addEventListener('refresh-conversations', this.refreshConversationsListener);
+
     // 2. Tải danh sách cuộc hội thoại
     let initialConversationId = queryParams && (queryParams.conversationId || queryParams.id);
     await this.loadConversations(true, initialConversationId);
@@ -266,6 +433,12 @@ export const HomeView = {
     socket.onConnectCallback = () => {
       updateConnectionStatus(true);
       OfflineQueueHandler.processOfflineQueue(this);
+      // Refresh conversations list on connect/reconnect
+      this.loadConversations(false, null, false, true);
+      // Tải lại tin nhắn mới nhất để đồng bộ sau khi kết nối
+      if (this.conversationId) {
+        this.loadMessages(this.conversationId, false, true);
+      }
     };
     socket.onDisconnectCallback = () => {
       updateConnectionStatus(false);
@@ -276,6 +449,12 @@ export const HomeView = {
     this.handleOnlineStatus = () => {
       updateConnectionStatus(true);
       OfflineQueueHandler.processOfflineQueue(this);
+      // Refresh conversations list on connect/reconnect
+      this.loadConversations(false, null, false, true);
+      // Tải lại tin nhắn mới nhất để đồng bộ sau khi kết nối lại
+      if (this.conversationId) {
+        this.loadMessages(this.conversationId, false, true);
+      }
     };
     this.handleOfflineStatus = () => {
       updateConnectionStatus(false);
@@ -350,7 +529,7 @@ export const HomeView = {
 
     // 5. Lắng nghe thông báo Firebase khi ứng dụng đang mở (Foreground)
     import('../../../js/core/firebase.js')
-      .then(({ initForegroundNotificationListener }) => {
+      .then(({ initForegroundNotificationListener, showNativeNotification }) => {
         initForegroundNotificationListener(async (payload) => {
           // Bỏ qua các sự kiện thu hồi tin nhắn ở foreground để WebSocket tự xử lý giao diện
           if (payload.data?.messageType === 'REVOKE_MESSAGE') {
@@ -363,11 +542,15 @@ export const HomeView = {
             return;
           }
 
-          const title = payload.notification?.title || 'Thông báo mới';
-          const body = payload.notification?.body || 'Bạn có một tin nhắn mới.';
+          const title = payload.notification?.title || payload.data?.title || 'Thông báo mới';
+          const body = payload.notification?.body || payload.data?.body || 'Bạn có một tin nhắn mới.';
           const conversationId = payload.data?.conversationId || payload.data?.id;
+          const messageId = payload.data?.messageId;
 
-          this.showIncomingMessageToast(title, body, conversationId);
+          // Nếu ngoài cuộc trò chuyện đó thì hiển thị thông báo native lên
+          if (String(conversationId) !== String(this.conversationId)) {
+            showNativeNotification(title, body, conversationId, messageId);
+          }
         });
       })
       .catch(err => {
@@ -511,11 +694,14 @@ export const HomeView = {
     }
   },
 
-  loadConversations(autoSelect = true, initialConversationId = null, nextPage = false) {
-    return ConversationHandler.loadConversations(this, autoSelect, initialConversationId, nextPage);
+  loadConversations(autoSelect = true, initialConversationId = null, nextPage = false, forceRefresh = false) {
+    return ConversationHandler.loadConversations(this, autoSelect, initialConversationId, nextPage, forceRefresh);
   },
 
   renderConversationsList() {
+    // Save conversations to cache whenever rendering the list
+    sessionStorage.setItem('chat_conversations_cache', JSON.stringify(this.conversations));
+
     renderConversationsList(
       this.conversations,
       this.conversationId,
@@ -551,7 +737,7 @@ export const HomeView = {
   },
 
   renderMessages() {
-    renderMessages(this.messages, this.conversationId);
+    renderMessages(this.messages, this.conversationId, this.conversations);
   },
 
   renderStagedFiles() {
@@ -614,19 +800,132 @@ export const HomeView = {
     SeenResolver.resolve(this.messages, this.conversations, conversationId, currentUserId);
   },
 
-  showIncomingMessageToast(senderName, text, conversationId) {
-    showIncomingMessageToast(
-      senderName,
-      text,
-      conversationId,
-      this.conversations,
-      this.profileCache,
-      this.selectConversation.bind(this)
-    );
+  loadMessages(conversationId, nextPage = false, forceRefresh = false) {
+    return MessageLoader.loadMessages(this, conversationId, nextPage, forceRefresh);
   },
 
-  loadMessages(conversationId, nextPage = false) {
-    return MessageLoader.loadMessages(this, conversationId, nextPage);
+  showReplyPreview(msg) {
+    this.replyingToMessage = msg;
+    const container = document.getElementById('reply-preview-container');
+    if (!container) return;
+
+    const currentUserId = localStorage.getItem('chat_user_id') || 'user_me';
+    const isSelf = String(msg.senderId) === String(currentUserId);
+    
+    let senderName = 'Người dùng';
+    if (isSelf) {
+      senderName = 'Bạn';
+    } else {
+      const convo = this.conversations.find(c => String(c.conversationId) === String(this.conversationId));
+      const senderObj = convo?.userConversations?.find(u => String(u.userId) === String(msg.senderId));
+      if (senderObj) {
+        senderName = senderObj.fullName || senderObj.displayName || senderObj.username || 'Thành viên';
+      }
+    }
+
+    let textSnippet = msg.text || '';
+    if (msg.isRevoked) {
+      textSnippet = 'Tin nhắn đã bị thu hồi';
+    } else {
+      const type = String(msg.type || 'TEXT').toUpperCase();
+      if (type === 'IMAGE') textSnippet = '[Hình ảnh]';
+      else if (type === 'VIDEO') textSnippet = '[Video]';
+      else if (type === 'AUDIO') textSnippet = '[Tin nhắn thoại]';
+      else if (type === 'FILE') textSnippet = '[Tài liệu]';
+    }
+
+    container.innerHTML = `
+      <div class="reply-preview-content" style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; border-left: 3px solid var(--accent-color); padding-left: 10px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color: var(--accent-color); flex-shrink: 0;">
+            <polyline points="9 17 4 12 9 7"></polyline>
+            <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
+          </svg>
+          <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1;">
+            <span style="font-size: 0.8rem; font-weight: 600; color: var(--accent-color);">Đang phản hồi ${senderName}</span>
+            <span style="font-size: 0.85rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;">${textSnippet}</span>
+          </div>
+        </div>
+        <button id="btn-cancel-reply" class="btn-cancel-reply" style="background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; padding: 0; transition: all 0.2s;" title="Hủy phản hồi">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    `;
+
+    container.style.display = 'flex';
+    
+    const cancelBtn = container.querySelector('#btn-cancel-reply');
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => {
+        this.clearReplyState();
+      });
+    }
+
+    const messageInput = document.getElementById('message-input');
+    if (messageInput) {
+      messageInput.focus();
+    }
+  },
+
+  clearReplyState() {
+    this.replyingToMessage = null;
+    const container = document.getElementById('reply-preview-container');
+    if (container) {
+      container.style.display = 'none';
+      container.innerHTML = '';
+    }
+  },
+
+  async scrollToAndHighlightMessage(targetId) {
+    let element = document.getElementById(`msg-${targetId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element.classList.add('highlight-flash');
+      setTimeout(() => element.classList.remove('highlight-flash'), 2000);
+      return;
+    }
+
+    if (this.hasMoreMessages && !this.messagesLoading) {
+      let searchToast = document.getElementById('reply-search-toast');
+      if (!searchToast) {
+        searchToast = document.createElement('div');
+        searchToast.id = 'reply-search-toast';
+        searchToast.style = 'position: absolute; top: 80px; left: 50%; transform: translateX(-50%); background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-full); padding: 6px 16px; font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); z-index: 999; pointer-events: none;';
+        searchToast.innerHTML = '<div class="spinner-sm" style="width: 12px; height: 12px; margin: 0;"></div> Đang tìm tin nhắn cũ hơn...';
+        const chatMain = document.querySelector('.chat-main');
+        if (chatMain) chatMain.appendChild(searchToast);
+      }
+
+      try {
+        await this.loadMessages(this.conversationId, true);
+        
+        element = document.getElementById(`msg-${targetId}`);
+        if (element) {
+          if (searchToast) searchToast.remove();
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.classList.add('highlight-flash');
+          setTimeout(() => element.classList.remove('highlight-flash'), 2000);
+        } else {
+          setTimeout(() => this.scrollToAndHighlightMessage(targetId), 100);
+        }
+      } catch (err) {
+        console.error('Failed to load messages while searching:', err);
+        if (searchToast) searchToast.remove();
+      }
+    } else {
+      const searchToast = document.getElementById('reply-search-toast');
+      if (searchToast) searchToast.remove();
+      
+      const { showDialog } = await import('../../../js/shared/dialog/dialog.js');
+      await showDialog({
+        title: 'Không tìm thấy tin nhắn',
+        message: 'Tin nhắn gốc đã quá cũ hoặc đã bị xóa.',
+        type: 'info'
+      });
+    }
   },
 
   cleanup() {
@@ -651,6 +950,38 @@ export const HomeView = {
       socket.removeListener(this.onMessageReceived);
       this.onMessageReceived = null;
     }
+    if (this.refreshConversationsListener) {
+      document.removeEventListener('refresh-conversations', this.refreshConversationsListener);
+      this.refreshConversationsListener = null;
+    }
+    
+    // Clean up reply listeners
+    if (this.replyClickListener) {
+      document.removeEventListener('reply-message-click', this.replyClickListener);
+      this.replyClickListener = null;
+    }
+    if (this.replyQuoteClickListener) {
+      document.removeEventListener('reply-quote-click', this.replyQuoteClickListener);
+      this.replyQuoteClickListener = null;
+    }
+    
+    const msgContainer = document.getElementById('chat-messages-container');
+    if (msgContainer) {
+      if (this.msgTouchStartListener) {
+        msgContainer.removeEventListener('touchstart', this.msgTouchStartListener);
+        this.msgTouchStartListener = null;
+      }
+      if (this.msgTouchMoveListener) {
+        msgContainer.removeEventListener('touchmove', this.msgTouchMoveListener);
+        this.msgTouchMoveListener = null;
+      }
+      if (this.msgTouchEndListener) {
+        msgContainer.removeEventListener('touchend', this.msgTouchEndListener);
+        this.msgTouchEndListener = null;
+      }
+    }
+    this.clearReplyState();
+
     this.isRecordingCanceled = true;
     VoiceRecorder.stop(this);
     this.hideVoicePreview();
@@ -659,6 +990,27 @@ export const HomeView = {
     if (this.stagedFiles && this.stagedFiles.length > 0) {
       AttachmentHandler.revokeUrls(this.stagedFiles);
       this.stagedFiles = [];
+    }
+  },
+
+  onRouteUpdate(queryParams) {
+    const newConversationId = queryParams && (queryParams.conversationId || queryParams.id);
+    if (newConversationId) {
+      if (String(this.conversationId) !== String(newConversationId)) {
+        this.selectConversation(newConversationId);
+      }
+      const dashboard = document.querySelector('.chat-dashboard');
+      if (dashboard) {
+        dashboard.classList.add('show-chat');
+      }
+    } else {
+      this.conversationId = null;
+      const dashboard = document.querySelector('.chat-dashboard');
+      if (dashboard) {
+        dashboard.classList.remove('show-chat');
+      }
+      const items = document.querySelectorAll('.conversation-item');
+      items.forEach(item => item.classList.remove('active'));
     }
   }
 };

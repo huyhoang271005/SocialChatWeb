@@ -4,7 +4,7 @@ import { VoiceRecorder } from './voice-recorder.js';
 import { AttachmentHandler } from './attachment-handler.js';
 
 export const ConversationHandler = {
-  async loadConversations(ctx, autoSelect = true, initialConversationId = null, nextPage = false) {
+  async loadConversations(ctx, autoSelect = true, initialConversationId = null, nextPage = false, forceRefresh = false) {
     if (ctx.conversationsLoading) return;
     ctx.conversationsLoading = true;
 
@@ -12,6 +12,43 @@ export const ConversationHandler = {
     if (!listContainer) {
       ctx.conversationsLoading = false;
       return;
+    }
+
+    // Load from cache if not nextPage and not forceRefresh
+    if (!nextPage && !forceRefresh) {
+      const cached = sessionStorage.getItem('chat_conversations_cache');
+      if (cached) {
+        try {
+          ctx.conversations = JSON.parse(cached);
+          ctx.renderConversationsList();
+          ctx.conversationsLoading = false;
+
+          const isMobile = window.innerWidth <= 768;
+          let targetId = initialConversationId;
+          if (!targetId && isMobile) {
+            ctx.renderEmptyChatFrame();
+          } else {
+            if (!targetId && ctx.conversations.length > 0) {
+              targetId = ctx.conversations[0].conversationId;
+            }
+
+            if (targetId) {
+              this.selectConversation(ctx, targetId);
+              if (initialConversationId) {
+                const dashboard = document.querySelector('.chat-dashboard');
+                if (dashboard) {
+                  dashboard.classList.add('show-chat');
+                }
+              }
+            } else {
+              ctx.renderEmptyChatFrame();
+            }
+          }
+          return;
+        } catch (e) {
+          console.warn('Failed to parse cached conversations:', e);
+        }
+      }
     }
 
     try {
@@ -64,15 +101,26 @@ export const ConversationHandler = {
     ctx.renderConversationsList();
 
     if (autoSelect && !nextPage) {
+      const isMobile = window.innerWidth <= 768;
       let targetId = initialConversationId;
-      if (!targetId && ctx.conversations.length > 0) {
-        targetId = ctx.conversations[0].conversationId;
-      }
-
-      if (targetId) {
-        this.selectConversation(ctx, targetId);
-      } else {
+      if (!targetId && isMobile) {
         ctx.renderEmptyChatFrame();
+      } else {
+        if (!targetId && ctx.conversations.length > 0) {
+          targetId = ctx.conversations[0].conversationId;
+        }
+
+        if (targetId) {
+          this.selectConversation(ctx, targetId);
+          if (initialConversationId) {
+            const dashboard = document.querySelector('.chat-dashboard');
+            if (dashboard) {
+              dashboard.classList.add('show-chat');
+            }
+          }
+        } else {
+          ctx.renderEmptyChatFrame();
+        }
       }
     }
   },
@@ -86,29 +134,7 @@ export const ConversationHandler = {
         if (titleEl) titleEl.textContent = profile.fullName;
         if (avatarEl && profile.avatarUrl) avatarEl.src = profile.avatarUrl;
       }, 0);
-      return;
     }
-
-    api.get(`profiles/${userId}`).then(res => {
-      if (res && res.success && res.data) {
-        ctx.profileCache.set(String(userId), res.data);
-        const titleEl = document.getElementById(titleElementId);
-        const avatarEl = document.getElementById(avatarElementId);
-        if (titleEl) titleEl.textContent = res.data.fullName;
-        if (avatarEl && res.data.avatarUrl) avatarEl.src = res.data.avatarUrl;
-
-        const activeConvo = ctx.conversations.find(c => String(c.conversationId) === String(ctx.conversationId));
-        if (activeConvo && !activeConvo.title && !activeConvo.group) {
-          const currentUserId = localStorage.getItem('chat_user_id');
-          const activeOtherParticipant = activeConvo.userConversations?.find(u => String(u.userId) !== String(currentUserId));
-          if (activeOtherParticipant && String(activeOtherParticipant.userId) === String(userId)) {
-            ctx.updateChatHeader(res.data.fullName, res.data.avatarUrl, 'Đang hoạt động', ctx.conversationId, ctx.conversations);
-          }
-        }
-      }
-    }).catch(err => {
-      console.warn('Failed to lazy load profile:', err);
-    });
   },
 
   async selectConversation(ctx, conversationId) {
@@ -154,12 +180,15 @@ export const ConversationHandler = {
       socket.sendSeen(conversationId, convo?.lastMessageId);
     }
 
-    // Revoke object URLs and clear staged files
+    // Revoke object URLs and clear staged files and reply state
     if (ctx.stagedFiles && ctx.stagedFiles.length > 0) {
       AttachmentHandler.revokeUrls(ctx.stagedFiles);
       ctx.stagedFiles = [];
     }
     ctx.renderStagedFiles();
+    if (ctx.clearReplyState) {
+      ctx.clearReplyState();
+    }
 
     const items = document.querySelectorAll('.conversation-item');
     items.forEach(item => {
@@ -170,9 +199,9 @@ export const ConversationHandler = {
       }
     });
 
-    history.replaceState(null, '', `#home?conversationId=${conversationId}`);
-    if (ctx.router) {
-      ctx.router.currentHash = `home?conversationId=${conversationId}`;
+    const targetHash = `home?conversationId=${conversationId}`;
+    if (window.location.hash.substring(1) !== targetHash) {
+      window.location.hash = targetHash;
     }
 
     let hasUnread = false;
@@ -186,7 +215,7 @@ export const ConversationHandler = {
       const defaultUserAvatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&h=100';
       const defaultGroupAvatar = 'https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?auto=format&fit=crop&w=100&h=100';
 
-      let avatarUrl = convo.conversationAvatar;
+      let avatarUrl = convo.conversationAvatarUrl;
       if (!avatarUrl) {
         avatarUrl = convo.group ? defaultGroupAvatar : defaultUserAvatar;
       }
@@ -196,18 +225,18 @@ export const ConversationHandler = {
         if (!convo.group) {
           const currentUserId = localStorage.getItem('chat_user_id');
           const otherParticipant = convo.userConversations?.find(u => String(u.userId) !== String(currentUserId));
-          const otherUserId = otherParticipant ? otherParticipant.userId : null;
-          if (otherUserId && ctx.profileCache.has(String(otherUserId))) {
-            const cachedProfile = ctx.profileCache.get(String(otherUserId));
-            displayTitle = cachedProfile.fullName;
-            avatarUrl = cachedProfile.avatarUrl || avatarUrl;
-          } else {
-            displayTitle = 'Đang tải...';
-            if (otherUserId) {
-              const elementUniqueId = `convo-title-${convo.conversationId}`;
-              const avatarUniqueId = `convo-avatar-${convo.conversationId}`;
-              this.getUserNameAndAvatar(ctx, otherUserId, elementUniqueId, avatarUniqueId);
+          if (otherParticipant) {
+            displayTitle = otherParticipant.fullName ||
+                           otherParticipant.user?.fullName ||
+                           otherParticipant.displayName ||
+                           otherParticipant.username ||
+                           otherParticipant.user?.username ||
+                           'Người dùng';
+            if (otherParticipant.avatarUrl || otherParticipant.user?.avatarUrl) {
+              avatarUrl = otherParticipant.avatarUrl || otherParticipant.user.avatarUrl;
             }
+          } else {
+            displayTitle = 'Trò chuyện #' + conversationId;
           }
         } else {
           displayTitle = 'Nhóm trò chuyện #' + convo.conversationId;
@@ -232,6 +261,11 @@ export const ConversationHandler = {
           setTimeout(() => {
             msgContainer.scrollTop = msgContainer.scrollHeight;
           }, 50);
+        }
+        // Chỉ tải tin nhắn từ server để làm mới danh sách nếu socket chưa kết nối
+        const isSocketConnected = socket && socket.client && socket.client.connected;
+        if (!isSocketConnected) {
+          ctx.loadMessages(conversationId, false);
         }
       } catch (e) {
         console.warn('Failed to parse cached messages:', e);

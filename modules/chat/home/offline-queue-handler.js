@@ -19,7 +19,7 @@ export const OfflineQueueHandler = {
     while (queue.length > 0 && navigator.onLine) {
       const item = queue[0];
       try {
-        socket.send(item.conversationId, item.message, item.type);
+        socket.send(item.conversationId, item.message, item.type, null, item.replyMessageId);
 
         if (String(item.conversationId) === String(ctx.conversationId)) {
           const msgIndex = ctx.messages.findIndex(m => m.id === item.tempId);
@@ -43,13 +43,14 @@ export const OfflineQueueHandler = {
     this.isSyncing = false;
   },
 
-  addOfflineMessage(ctx, tempId, conversationId, messageText, type = 'text') {
+  addOfflineMessage(ctx, tempId, conversationId, messageText, type = 'text', replyMessageId = null) {
     let queue = JSON.parse(localStorage.getItem(this.queueKey) || '[]');
     queue.push({
       tempId,
       conversationId,
       message: messageText,
-      type
+      type,
+      replyMessageId
     });
     localStorage.setItem(this.queueKey, JSON.stringify(queue));
     this.processOfflineQueue(ctx);

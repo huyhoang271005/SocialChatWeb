@@ -13,6 +13,10 @@ export const MessageSender = {
     if (!ctx.conversationId) return;
 
     const targetConversationId = ctx.conversationId;
+    const replyMessageId = ctx.replyingToMessage ? ctx.replyingToMessage.id : null;
+    const replyText = ctx.replyingToMessage ? ctx.replyingToMessage.text : null;
+    const replyType = ctx.replyingToMessage ? ctx.replyingToMessage.type : null;
+    const replyRevoked = ctx.replyingToMessage ? (ctx.replyingToMessage.isRevoked || ctx.replyingToMessage.revoked) : null;
 
     if (hasStagedFiles) {
       if (!navigator.onLine) {
@@ -41,6 +45,8 @@ export const MessageSender = {
       const now = new Date();
       const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
+      const currentUserId = localStorage.getItem('chat_user_id') || 'user_me';
+
       // Đẩy tin nhắn tạm thời lên màn hình lập tức (Optimistic UI)
       filesToUpload.forEach((item, index) => {
         const tempId = `temp_file_${Date.now()}_${index}`;
@@ -49,11 +55,16 @@ export const MessageSender = {
         ctx.messages.push({
           id: tempId,
           sender: 'me',
+          senderId: currentUserId,
           text: item.previewUrl || item.file.name,
           fileName: item.file.name,
           type: item.type,
           time: timeStr,
-          status: 'pending'
+          status: 'pending',
+          replyMessageId,
+          replyText,
+          replyType,
+          replyRevoked
         });
       });
 
@@ -61,7 +72,7 @@ export const MessageSender = {
       ctx.renderMessages();
 
       // Bắt đầu tải lên ngầm và gửi WebSocket
-      this.uploadFilesInBackground(ctx, filesToUpload, tempMsgIds, targetConversationId);
+      this.uploadFilesInBackground(ctx, filesToUpload, tempMsgIds, targetConversationId, replyMessageId);
     }
 
     // Gửi tin nhắn văn bản nếu có
@@ -70,12 +81,18 @@ export const MessageSender = {
       const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
       const tempId = `temp_${Date.now()}`;
 
+      const currentUserId = localStorage.getItem('chat_user_id') || 'user_me';
       const newMsg = {
         id: tempId,
         sender: 'me',
+        senderId: currentUserId,
         text,
         time: timeStr,
-        status: 'pending'
+        status: 'pending',
+        replyMessageId,
+        replyText,
+        replyType,
+        replyRevoked
       };
 
       ctx.messages.push(newMsg);
@@ -84,11 +101,16 @@ export const MessageSender = {
       sessionStorage.setItem(`chat_messages_cache_${targetConversationId}`, JSON.stringify(ctx.messages));
       ctx.renderMessages();
 
-      OfflineQueueHandler.addOfflineMessage(ctx, tempId, targetConversationId, text, 'text');
+      OfflineQueueHandler.addOfflineMessage(ctx, tempId, targetConversationId, text, 'text', replyMessageId);
+    }
+
+    // Xóa trạng thái phản hồi sau khi gửi
+    if (ctx.clearReplyState) {
+      ctx.clearReplyState();
     }
   },
 
-  async uploadFilesInBackground(ctx, filesToUpload, tempMsgIds, targetConversationId) {
+  async uploadFilesInBackground(ctx, filesToUpload, tempMsgIds, targetConversationId, replyMessageId = null) {
     for (let i = 0; i < filesToUpload.length; i++) {
       const item = filesToUpload[i];
       const tempId = tempMsgIds[i];
@@ -110,7 +132,7 @@ export const MessageSender = {
           this.updateLocalMessageAfterUpload(ctx, targetConversationId, tempId, fileUrl);
 
           // Gửi tin nhắn qua WebSocket
-          socket.send(targetConversationId, fileUrl, item.type, fileId);
+          socket.send(targetConversationId, fileUrl, item.type, fileId, replyMessageId);
         } else {
           throw new Error(res?.message || `Không thể tải lên tệp ${item.file.name}`);
         }
@@ -174,7 +196,7 @@ export const MessageSender = {
     }
   },
 
-  async handleDirectFileUpload(ctx, file, type) {
+  async handleDirectFileUpload(ctx, file, type, replyMessageId = null) {
     if (!ctx.conversationId) return;
 
     const targetConversationId = ctx.conversationId;
@@ -185,24 +207,48 @@ export const MessageSender = {
     // Tạo URL xem trước cục bộ cho tệp tin (ghi âm hoặc ảnh trực tiếp)
     const previewUrl = URL.createObjectURL(file);
 
+    const currentUserId = localStorage.getItem('chat_user_id') || 'user_me';
+
+    let replyText = null;
+    let replyType = null;
+    let replyRevoked = null;
+    if (replyMessageId && ctx.messages) {
+      const orig = ctx.messages.find(m => String(m.id) === String(replyMessageId));
+      if (orig) {
+        replyText = orig.text;
+        replyType = orig.type;
+        replyRevoked = orig.isRevoked || orig.revoked;
+      }
+    }
+
     // Đẩy tin nhắn ghi âm tạm thời lên màn hình lập tức (Optimistic UI)
     ctx.messages.push({
       id: tempId,
       sender: 'me',
+      senderId: currentUserId,
       text: previewUrl,
       type: type,
       time: timeStr,
-      status: 'pending'
+      status: 'pending',
+      replyMessageId,
+      replyText,
+      replyType,
+      replyRevoked
     });
 
     sessionStorage.setItem(`chat_messages_cache_${targetConversationId}`, JSON.stringify(ctx.messages));
     ctx.renderMessages();
 
     // Thực hiện tải lên ngầm và gửi
-    this.uploadDirectFileInBackground(ctx, file, tempId, previewUrl, type, targetConversationId);
+    this.uploadDirectFileInBackground(ctx, file, tempId, previewUrl, type, targetConversationId, replyMessageId);
+
+    // Xóa trạng thái phản hồi sau khi gửi
+    if (ctx.clearReplyState) {
+      ctx.clearReplyState();
+    }
   },
 
-  async uploadDirectFileInBackground(ctx, file, tempId, previewUrl, type, targetConversationId) {
+  async uploadDirectFileInBackground(ctx, file, tempId, previewUrl, type, targetConversationId, replyMessageId = null) {
     try {
       const uploadFunc = (type === 'IMAGE') ? api.uploadImage : api.uploadFile;
       const res = await uploadFunc(file, 'messages');
@@ -218,7 +264,7 @@ export const MessageSender = {
         this.updateLocalMessageAfterUpload(ctx, targetConversationId, tempId, fileUrl);
 
         // Gửi qua WebSocket
-        socket.send(targetConversationId, fileUrl, type, fileId);
+        socket.send(targetConversationId, fileUrl, type, fileId, replyMessageId);
       } else {
         throw new Error(res?.message || `Không thể tải lên tệp tin`);
       }

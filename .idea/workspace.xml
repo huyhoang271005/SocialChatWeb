@@ -5,15 +5,23 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/css/sidebar.css" beforeDir="false" afterPath="$PROJECT_DIR$/css/sidebar.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/firebase-messaging-sw.js" beforeDir="false" afterPath="$PROJECT_DIR$/firebase-messaging-sw.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/index.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/js/core/api.js" beforeDir="false" afterPath="$PROJECT_DIR$/js/core/api.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/js/core/config.js" beforeDir="false" afterPath="$PROJECT_DIR$/js/core/config.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/js/core/firebase.js" beforeDir="false" afterPath="$PROJECT_DIR$/js/core/firebase.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/js/core/router.js" beforeDir="false" afterPath="$PROJECT_DIR$/js/core/router.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/js/core/websocket.js" beforeDir="false" afterPath="$PROJECT_DIR$/js/core/websocket.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/modules/auth/login/login.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/auth/login/login.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/modules/chat/home/chat-frame.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/chat/home/chat-frame.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/chat/home/conversation-handler.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/chat/home/conversation-handler.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/modules/chat/home/conversations.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/chat/home/conversations.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/modules/chat/home/home.css" beforeDir="false" afterPath="$PROJECT_DIR$/modules/chat/home/home.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/modules/chat/home/home.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/chat/home/home.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/chat/home/message-loader.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/chat/home/message-loader.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/chat/home/message-sender.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/chat/home/message-sender.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/chat/home/offline-queue-handler.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/chat/home/offline-queue-handler.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/chat/home/socket-event-handler.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/chat/home/socket-event-handler.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/chat/home/toast.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/users/users.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/users/users.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -23,6 +31,12 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/huyhoang271005/SocialChatWeb.git",
+    "accountId": "ef4b2156-02f6-4809-8639-b1d80fd13e0a"
+  }
+}]]></component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 5,
   &quot;fromUser&quot;: false
@@ -86,7 +100,12 @@
       <workItem from="1781608733415" duration="2228000" />
       <workItem from="1781758363539" duration="1882000" />
       <workItem from="1781766223892" duration="1204000" />
-      <workItem from="1781778911971" duration="8194000" />
+      <workItem from="1781778911971" duration="9066000" />
+      <workItem from="1781852509243" duration="685000" />
+      <workItem from="1781887656996" duration="4198000" />
+      <workItem from="1781934839967" duration="3253000" />
+      <workItem from="1781965694292" duration="5363000" />
+      <workItem from="1782022624906" duration="3273000" />
     </task>
     <servers />
   </component>
