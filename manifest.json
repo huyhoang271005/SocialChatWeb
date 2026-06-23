@@ -1,7 +1,7 @@
 {
-  "name": "ChatApp Real-time",
-  "short_name": "ChatApp",
-  "description": "Hệ thống chat real-time hiện đại với giao diện sang trọng, mượt mà và tối ưu trải nghiệm người dùng.",
+  "name": "PingMe",
+  "short_name": "PingMe",
+  "description": "Hệ thống chat hiện đại với giao diện sang trọng, mượt mà và tối ưu trải nghiệm người dùng.",
   "start_url": ".",
   "display": "standalone",
   "orientation": "portrait",
@@ -9,12 +9,22 @@
   "theme_color": "#7c3aed",
   "icons": [
     {
-      "src": "app_icon.png",
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "android-chrome-192x192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "app_icon.png",
+      "src": "android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "android-chrome-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

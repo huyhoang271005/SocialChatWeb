@@ -1,9 +1,19 @@
 /* Sessions Dashboard Stylesheet */
 
 .sessions-dashboard {
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  max-width: 900px;
+  max-width: 100%;
   margin: 0 auto;
+  min-height: 100%;
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: none;
+  border-radius: 0;
+  padding: 30px;
+  box-shadow: none;
   position: relative;
   overflow: hidden;
   animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -41,8 +51,8 @@
   align-items: center;
   justify-content: center;
   min-height: 250px;
-  background: var(--bg-card);
-  border-radius: var(--radius-lg);
+  background: hsla(230, 25%, 6%, 0.3);
+  border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
   padding: 40px;
   backdrop-filter: blur(16px);
@@ -68,13 +78,11 @@
 
 /* Device Session Card */
 .session-card {
-  background: var(--bg-card);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: hsla(230, 25%, 6%, 0.35);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   padding: 20px 24px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  box-shadow: none;
   transition: var(--transition-smooth);
   display: flex;
   flex-direction: column;
@@ -101,8 +109,8 @@
 
 .session-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.35);
-  border-color: hsla(230, 100%, 80%, 0.15);
+  border-color: var(--accent-color);
+  box-shadow: 0 0 15px var(--accent-glow);
 }
 
 .session-card.revoked {
@@ -432,6 +440,10 @@
 
 /* Responsive styles */
 @media (max-width: 768px) {
+  .sessions-dashboard {
+    padding: 16px !important;
+  }
+
   .session-card {
     padding: 18px 20px;
   }

@@ -3,6 +3,17 @@ import { handleTokenRefresh } from './api.js';
 import { Client } from 'https://esm.sh/@stomp/stompjs';
 import SockJS from 'https://esm.sh/sockjs-client';
 
+function generateUUID() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 class WebSocketManager {
   constructor() {
     this.client = null;
@@ -11,6 +22,7 @@ class WebSocketManager {
     this.reconnectInterval = 3000;
     this.listeners = new Set();
     this.isConnecting = false;
+    this.isRefreshingToken = false;
     this.url = null;
     this.activeSubscriptions = new Set(); // Lưu danh sách conversationId dạng chuỗi
     this.subscriptionsMap = new Map(); // Lưu đối tượng subscription của STOMP: conversationId -> STOMP subscription
@@ -105,7 +117,7 @@ class WebSocketManager {
 
       subscriptionsToRestore.forEach(subKey => {
         const [topicName, id] = subKey.split(':');
-        this.subscribe(id);
+        this.subscribe(id || '', topicName);
       });
 
       if (this.onConnectCallback) {
@@ -118,13 +130,12 @@ class WebSocketManager {
     };
 
     this.client.onStompError = async (frame) => {
-
-      // Xử lý hết hạn hoặc lỗi token
-      const errorMsg = frame.headers['message'];
-      const errorBody = frame.body;
+      // Xử lý hết hạn hoặc lỗi token khi server trả về có chữ UNAUTHORIZED
+      const errorMsg = frame.headers['message'] || '';
+      const errorBody = frame.body || '';
       const isTokenExpiredOrInvalid =
-        errorMsg === 'UNAUTHORIZED:TOKEN_EXPIRED' || errorMsg === 'UNAUTHORIZED:TOKEN_INVALID' ||
-        errorBody === 'UNAUTHORIZED:TOKEN_EXPIRED' || errorBody === 'UNAUTHORIZED:TOKEN_INVALID';
+        (typeof errorMsg === 'string' && errorMsg.includes('UNAUTHORIZED')) ||
+        (typeof errorBody === 'string' && errorBody.includes('UNAUTHORIZED'));
 
       if (isTokenExpiredOrInvalid) {
         await this.handleTokenExpired();
@@ -150,14 +161,28 @@ class WebSocketManager {
    * Xử lý refresh token khi phát hiện token hết hạn và kết nối lại
    */
   async handleTokenExpired() {
+    if (this.isRefreshingToken) {
+      return;
+    }
+    this.isRefreshingToken = true;
     this.disconnect();
     try {
-      await handleTokenRefresh();
-      await this.connect();
+      const res = await handleTokenRefresh();
+      if (res && res.success) {
+        await this.connect();
+      } else {
+        console.warn('Refresh token failed, stopping websocket connection.');
+        sessionStorage.clear();
+        localStorage.clear();
+        window.location.hash = '#login';
+      }
     } catch (error) {
+      console.error('Error during token refresh in websocket:', error);
       sessionStorage.clear();
       localStorage.clear();
       window.location.hash = '#login';
+    } finally {
+      this.isRefreshingToken = false;
     }
   }
 
@@ -176,21 +201,25 @@ class WebSocketManager {
    * Gửi tin nhắn chat chuẩn lên STOMP broker
    * @param {string} conversationId
    * @param {string} text
-   * @param {string} type 'text'|'image'|'file'|'revoked'
-   * @param fileId
-   * @param replyMessageId
+   * @param {string} type
+   * @param {string} fileId
+   * @param {string} replyMessageId
    */
   send(conversationId, text, type = 'TEXT', fileId = null, replyMessageId = null) {
+    const clientMsgId = generateUUID();
     const payload = {
-      conversationId,
-      text,
-      type
+      message: {
+        conversationId,
+        text,
+        type
+      },
+      clientMsgId
     };
     if (fileId) {
-      payload.fileId = fileId;
+      payload.message.fileId = fileId;
     }
     if (replyMessageId) {
-      payload.replyMessageId = replyMessageId;
+      payload.message.replyMessageId = replyMessageId;
     }
 
     if (this.client && this.client.connected) {
@@ -199,13 +228,17 @@ class WebSocketManager {
         body: JSON.stringify(payload)
       });
     }
+    return clientMsgId;
   }
 
   sendTyping(conversationId) {
     if (this.client && this.client.connected) {
       this.client.publish({
         destination: '/app/chat.typing',
-        body: JSON.stringify({ conversationId })
+        body: JSON.stringify({
+          message: { conversationId },
+          clientMsgId: generateUUID()
+        })
       });
     }
   }
@@ -214,7 +247,10 @@ class WebSocketManager {
     if (this.client && this.client.connected) {
       this.client.publish({
         destination: '/app/chat.untyping',
-        body: JSON.stringify({ conversationId })
+        body: JSON.stringify({
+          message: { conversationId },
+          clientMsgId: generateUUID()
+        })
       });
     }
   }
@@ -222,9 +258,12 @@ class WebSocketManager {
   sendSeen(conversationId, messageId, senderId) {
     if (this.client && this.client.connected) {
       const payload = {
-        conversationId,
-        messageId,
-        senderId
+        message : {
+          conversationId,
+          messageId,
+          senderId
+        },
+        clientMsgId: generateUUID()
       };
       this.client.publish({
         destination: '/app/chat.seen',
@@ -236,8 +275,11 @@ class WebSocketManager {
   sendRevoke(conversationId, messageId) {
     if (this.client && this.client.connected) {
       const payload = {
-        conversationId,
-        messageId
+        message: {
+          conversationId,
+          messageId
+        },
+        clientMsgId: generateUUID()
       };
       this.client.publish({
         destination: '/app/chat.revoke',
@@ -253,23 +295,26 @@ class WebSocketManager {
    * @param {string} id 
    * @param {string} topicName 
    */
-  subscribe(id) {
-    const topicName = "users";
+  subscribe(id, topicName = 'users') {
     const subscriptionKey = `${topicName}:${id}`;
     if (this.subscriptionsMap.has(subscriptionKey)) {
-
       return;
     }
 
     this.activeSubscriptions.add(subscriptionKey);
 
     // Đường dẫn subscribe (destination) tùy thuộc cấu hình Spring Boot
-    const destination = `/topic/${topicName}.${id}`;
+    let destination;
+    if (topicName.startsWith('/') || topicName.includes('/')) {
+      destination = topicName.startsWith('/') ? topicName : `/${topicName}`;
+    } else {
+      destination = `/topic/${topicName}.${id}`;
+    }
 
     if (this.client && this.client.connected) {
       const stompSubscription = this.client.subscribe(destination, async (message) => {
-
-        if (message.body === 'UNAUTHORIZED:TOKEN_EXPIRED' || message.body === 'UNAUTHORIZED:TOKEN_INVALID') {
+        const bodyStr = typeof message.body === 'string' ? message.body : '';
+        if (bodyStr.includes('UNAUTHORIZED')) {
           await this.handleTokenExpired();
           return;
         }
@@ -281,16 +326,15 @@ class WebSocketManager {
           data = message.body;
         }
 
-        if (data && (
-          data.error === 'UNAUTHORIZED:TOKEN_EXPIRED' || data.error === 'UNAUTHORIZED:TOKEN_INVALID' ||
-          data.message === 'UNAUTHORIZATION:TOKEN_EXPIRED' || data.message === 'UNAUTHORIZATION:TOKEN_INVALID' ||
-          data.message === 'UNAUTHORIZED:TOKEN_EXPIRED' || data.message === 'UNAUTHORIZED:TOKEN_INVALID'
-        )) {
-          await this.handleTokenExpired();
-          return;
+        if (data) {
+          const errMsg = data.error || data.message || '';
+          if (typeof errMsg === 'string' && (errMsg.includes('UNAUTHORIZED') || errMsg.includes('UNAUTHORIZATION'))) {
+            await this.handleTokenExpired();
+            return;
+          }
         }
 
-        this.listeners.forEach(callback => callback(data));
+        this.listeners.forEach(callback => callback(data, destination));
       });
 
       this.subscriptionsMap.set(subscriptionKey, stompSubscription);

@@ -2,6 +2,7 @@ import { api } from '../../../js/core/api.js';
 import { showDialog } from '../../../js/shared/dialog/dialog.js';
 import { CONFIG } from '../../../js/core/config.js';
 import { loginWithGoogle, getFCMToken } from '../../../js/core/firebase.js';
+import { t, getLanguage } from '../../../js/core/i18n.js';
 
 export const LoginView = {
   render() {
@@ -10,17 +11,17 @@ export const LoginView = {
         <!-- Loading Overlay -->
         <div class="loading-overlay" id="login-loading">
           <div class="spinner"></div>
-          <div class="loading-text">Đang kết nối...</div>
+          <div class="loading-text">${t('connecting')}</div>
         </div>
 
         <div class="auth-header login-header-animate">
-          <h1>Đăng Nhập</h1>
-          <p>Chào mừng bạn trở lại với ChatApp</p>
+          <h1>${t('login_title')}</h1>
+          <p>${t('login_welcome')}</p>
         </div>
 
         <form id="login-form" class="login-form-animate">
           <div class="form-group">
-            <label class="form-label" for="login-email">Email</label>
+            <label class="form-label" for="login-email">${t('email_label')}</label>
             <input 
               type="email" 
               id="login-email" 
@@ -32,7 +33,7 @@ export const LoginView = {
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="login-password">Mật khẩu</label>
+            <label class="form-label" for="login-password">${t('password_label')}</label>
             <input 
               type="password" 
               id="login-password" 
@@ -50,17 +51,17 @@ export const LoginView = {
               style="width: 16px; height: 16px; cursor: pointer; margin: 0;"
             >
             <label for="login-remember" style="font-size: 0.9rem; color: var(--text-secondary); cursor: pointer; user-select: none; margin: 0;">
-              Ghi nhớ đăng nhập
+              ${t('remember_me')}
             </label>
           </div>
 
           <button type="submit" class="btn btn-primary" style="margin-top: 10px;">
-            Đăng Nhập
+            ${t('login_title')}
           </button>
         </form>
 
         <div class="auth-divider login-form-animate" style="animation-delay: 0.15s;">
-          <span>Hoặc</span>
+          <span>${t('or_divider')}</span>
         </div>
 
         <button type="button" id="google-login-btn" class="btn btn-google login-form-animate" style="animation-delay: 0.2s;">
@@ -70,12 +71,12 @@ export const LoginView = {
             <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
             <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
           </svg>
-          Đăng nhập bằng Google
+          ${t('google_login')}
         </button>
 
         <div class="auth-links login-form-animate" style="animation-delay: 0.25s;">
-          <a href="#forgot-password" class="auth-link" id="link-forgot-pw">Quên mật khẩu?</a>
-          <a href="#register" class="auth-link">Đăng ký tài khoản</a>
+          <a href="#forgot-password" class="auth-link" id="link-forgot-pw">${t('forgot_password_link')}</a>
+          <a href="#register" class="auth-link">${t('register_link')}</a>
         </div>
       </div>
     `;
@@ -91,10 +92,10 @@ export const LoginView = {
       googleBtn.addEventListener('click', async () => {
         loading.classList.add('active');
         const loadingText = loading.querySelector('.loading-text');
-        const originalText = loadingText ? loadingText.textContent : 'Đang kết nối...';
+        const originalText = loadingText ? loadingText.textContent : t('connecting');
 
         try {
-          if (loadingText) loadingText.textContent = 'Đang kết nối Google...';
+          if (loadingText) loadingText.textContent = t('connecting_google');
 
           // 1. Đăng nhập Google qua Firebase
           const loginResult = await loginWithGoogle();
@@ -103,11 +104,11 @@ export const LoginView = {
           const userEmail = loginResult.user.email || '';
 
           // 2. Lấy FCM Token (nếu hỗ trợ và đã bật thông báo)
-          if (loadingText) loadingText.textContent = 'Đang đăng ký nhận thông báo...';
+          if (loadingText) loadingText.textContent = t('registering_notifications');
           const fcmToken = await getFCMToken();
 
           // 3. Gửi thông tin lên Backend để đăng nhập
-          if (loadingText) loadingText.textContent = 'Xác thực tài khoản...';
+          if (loadingText) loadingText.textContent = t('authenticating');
           const response = await api.post('auth/login/oauth2', { firebaseToken, fcmToken });
 
           if (response.success && response.data?.firebaseToken) {
@@ -118,7 +119,7 @@ export const LoginView = {
             loading.classList.remove('active');
             if (loadingText) loadingText.textContent = originalText;
             await showDialog({
-              title: "Lỗi đăng nhập",
+              title: t('login_error_title'),
               message: Array.isArray(response.data) ? response.data.join(", ") : response.message,
               type: 'error'
             });
@@ -132,10 +133,10 @@ export const LoginView = {
             loading.classList.remove('active');
             if (loadingText) loadingText.textContent = originalText;
             const confirmed = await showDialog({
-              title: "Xác thực email",
-              message: "Email của bạn chưa được xác thực. Vui lòng xác thực để tiếp tục.",
+              title: t('email_unverified_title'),
+              message: t('email_unverified_message'),
               type: 'warning',
-              buttons: [{ text: "Xác thực ngay", type: 'primary', value: true }]
+              buttons: [{ text: t('verify_now'), type: 'primary', value: true }]
             });
             if (confirmed) {
               loading.classList.add('active');
@@ -144,7 +145,7 @@ export const LoginView = {
               });
               loading.classList.remove('active');
               await showDialog({
-                title: "Gửi email xác thực",
+                title: t('send_verification_email'),
                 message: verifyEmail.message,
                 type: verifyEmail.success ? 'success' : 'error',
               });
@@ -157,10 +158,10 @@ export const LoginView = {
             loading.classList.remove('active');
             if (loadingText) loadingText.textContent = originalText;
             const confirmed = await showDialog({
-              title: "Xác thực thiết bị",
-              message: "Thiết bị của bạn chưa được xác thực. Vui lòng xác thực để tiếp tục.",
+              title: t('device_unverified_title'),
+              message: t('device_unverified_message'),
               type: 'warning',
-              buttons: [{ text: "Xác thực ngay", type: 'primary', value: true }]
+              buttons: [{ text: t('verify_now'), type: 'primary', value: true }]
             });
             if (confirmed) {
               loading.classList.add('active');
@@ -169,7 +170,7 @@ export const LoginView = {
               });
               loading.classList.remove('active');
               await showDialog({
-                title: "Gửi email xác thực",
+                title: t('send_verification_email'),
                 message: verifyDevice.message,
                 type: verifyDevice.success ? 'success' : 'error',
               });
@@ -186,10 +187,10 @@ export const LoginView = {
             loading.classList.remove('active');
             if (loadingText) loadingText.textContent = originalText;
             const confirmed = await showDialog({
-              title: 'Hoàn tất hồ sơ',
-              message: 'Tài khoản của bạn chưa cập nhật thông tin cá nhân. Vui lòng hoàn tất đăng ký để tiếp tục.',
+              title: t('profile_incomplete_title'),
+              message: t('profile_incomplete_message'),
               type: 'info',
-              buttons: [{ text: 'Cập nhật ngay', type: 'primary', value: true }]
+              buttons: [{ text: t('update_now'), type: 'primary', value: true }]
             });
 
             if (confirmed) {
@@ -214,13 +215,6 @@ export const LoginView = {
 
           loading.classList.remove('active');
           if (loadingText) loadingText.textContent = originalText;
-          await showDialog({
-            title: 'Đăng nhập thành công',
-            message: `Chào mừng`,
-            type: 'success',
-            buttons: [{ text: 'Bắt đầu ngay', type: 'primary', value: true }]
-          });
-
           router.navigate('home');
 
         } catch (error) {
@@ -228,8 +222,8 @@ export const LoginView = {
           if (loadingText) loadingText.textContent = originalText;
           if (error.code !== 'auth/popup-closed-by-user') {
             await showDialog({
-              title: "Lỗi đăng nhập Google",
-              message: error.message || "Có lỗi xảy ra trong quá trình đăng nhập bằng Google.",
+              title: t('login_error_title'),
+              message: error.message || t('login_error_title'),
               type: 'error'
             });
           }
@@ -243,15 +237,15 @@ export const LoginView = {
       const currentEmail = document.getElementById('login-email').value.trim();
 
       const result = await showDialog({
-        title: 'Quên mật khẩu',
-        message: 'Vui lòng nhập địa chỉ email của bạn để nhận liên kết khôi phục mật khẩu:',
+        title: t('forgot_password_title'),
+        message: t('forgot_password_msg'),
         type: 'info',
         showInput: true,
         inputPlaceholder: 'ten@viethan.com',
         inputValue: currentEmail,
         buttons: [
-          { text: 'Hủy', type: 'secondary', value: false },
-          { text: 'Tiếp tục', type: 'primary', value: true }
+          { text: t('logout_cancel'), type: 'secondary', value: false },
+          { text: t('continue'), type: 'primary', value: true }
         ]
       });
 
@@ -259,8 +253,8 @@ export const LoginView = {
         const emailName = result.inputValue.trim();
         if (!emailName) {
           await showDialog({
-            title: 'Lỗi',
-            message: 'Địa chỉ email không được để trống.',
+            title: t('error_title'),
+            message: t('email_required'),
             type: 'error'
           });
           return;
@@ -271,7 +265,7 @@ export const LoginView = {
         loading.classList.remove('active');
 
         await showDialog({
-          title: response.success ? 'Thành công' : 'Lỗi gửi yêu cầu',
+          title: response.success ? t('request_success') : t('request_failed'),
           message: response.message,
           type: response.success ? 'success' : 'error'
         });
@@ -287,12 +281,12 @@ export const LoginView = {
 
       loading.classList.add('active');
       const loadingText = loading.querySelector('.loading-text');
-      const originalText = loadingText ? loadingText.textContent : 'Đang kết nối...';
+      const originalText = loadingText ? loadingText.textContent : t('connecting');
 
-      if (loadingText) loadingText.textContent = 'Đang đăng ký nhận thông báo...';
+      if (loadingText) loadingText.textContent = t('registering_notifications');
       const fcmToken = await getFCMToken();
 
-      if (loadingText) loadingText.textContent = 'Đang đăng nhập...';
+      if (loadingText) loadingText.textContent = t('logging_in');
       const response = await api.post('auth/login', { emailName: email, password, fcmToken });
       if (loadingText) loadingText.textContent = originalText;
 
@@ -303,7 +297,7 @@ export const LoginView = {
       if (!response.success) {
         loading.classList.remove('active');
         await showDialog({
-          title: "Lỗi đăng nhập",
+          title: t('login_error_title'),
           message: Array.isArray(response.data) ? response.data.join(", ") : response.message,
           type: 'error'
         });
@@ -313,10 +307,10 @@ export const LoginView = {
       if (response.data && response.data.verifiedEmail === false) {
         loading.classList.remove('active');
         const confirmed = await showDialog({
-          title: "Xác thực email",
-          message: "Email của bạn chưa được xác thực. Vui lòng xác thực để tiêp tục.",
+          title: t('email_unverified_title'),
+          message: t('email_unverified_message'),
           type: 'warning',
-          buttons: [{ text: "Xác thực ngay", type: 'primary', value: true }]
+          buttons: [{ text: t('verify_now'), type: 'primary', value: true }]
         });
         if (confirmed) {
           loading.classList.add('active');
@@ -325,7 +319,7 @@ export const LoginView = {
           });
           loading.classList.remove('active');
           await showDialog({
-            title: "Gửi email xác thực",
+            title: t('send_verification_email'),
             message: verifyEmail.message,
             type: verifyEmail.success ? 'success' : 'error',
           });
@@ -336,10 +330,10 @@ export const LoginView = {
       if (response.data && response.data.verifiedDevice === false) {
         loading.classList.remove('active');
         const confirmed = await showDialog({
-          title: "Xác thực thiết bị",
-          message: "Thiết bị của bạn chưa được xác thực. Vui lòng xác thực để tiếp tục.",
+          title: t('device_unverified_title'),
+          message: t('device_unverified_message'),
           type: 'warning',
-          buttons: [{ text: "Xác thực ngay", type: 'primary', value: true }]
+          buttons: [{ text: t('verify_now'), type: 'primary', value: true }]
         });
         if (confirmed) {
           loading.classList.add('active');
@@ -348,7 +342,7 @@ export const LoginView = {
           });
           loading.classList.remove('active');
           await showDialog({
-            title: "Gửi email xác thực",
+            title: t('send_verification_email'),
             message: verifyDevice.message,
             type: verifyDevice.success ? 'success' : 'error',
           });
@@ -366,10 +360,10 @@ export const LoginView = {
         localStorage.removeItem('chat_profile_completed');
         loading.classList.remove('active');
         const confirmed = await showDialog({
-          title: 'Hoàn tất hồ sơ',
-          message: 'Tài khoản của bạn chưa cập nhật thông tin cá nhân. Vui lòng hoàn tất đăng ký để tiếp tục.',
+          title: t('profile_incomplete_title'),
+          message: t('profile_incomplete_message'),
           type: 'info',
-          buttons: [{ text: 'Cập nhật ngay', type: 'primary', value: true }]
+          buttons: [{ text: t('update_now'), type: 'primary', value: true }]
         });
 
         if (confirmed) {
@@ -393,13 +387,6 @@ export const LoginView = {
       localStorage.setItem('chat_profile_completed', 'true');
 
       loading.classList.remove('active');
-      await showDialog({
-        title: 'Đăng nhập thành công',
-        message: `Chào mừng`,
-        type: 'success',
-        buttons: [{ text: 'Bắt đầu ngay', type: 'primary', value: true }]
-      });
-
       router.navigate('home');
     });
   }

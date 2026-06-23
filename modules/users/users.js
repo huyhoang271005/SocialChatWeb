@@ -1,5 +1,6 @@
 import { api } from '../../js/core/api.js';
 import { showDialog } from '../../js/shared/dialog/dialog.js';
+import { t } from '../../js/core/i18n.js';
 
 export const UsersView = {
   usersList: [],
@@ -22,7 +23,7 @@ export const UsersView = {
         <!-- Loading Overlay for Full Screen/Actions -->
         <div class="loading-overlay" id="users-loading-overlay">
           <div class="spinner"></div>
-          <div class="loading-text" id="users-loading-text">Đang thực hiện cập nhật...</div>
+          <div class="loading-text" id="users-loading-text">${t('updating_config_overlay')}</div>
         </div>
 
         <div class="users-header">
@@ -33,24 +34,24 @@ export const UsersView = {
               <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
               <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
             </svg>
-            <h2>Quản lý Người dùng</h2>
+            <h2>${t('users_title')}</h2>
           </div>
         </div>
 
         <div class="users-layout">
           <!-- Left Column: User list -->
           <div class="users-section list-section">
-            <h3 class="section-title">Danh sách Thành viên</h3>
+            <h3 class="section-title">${t('members_list_title')}</h3>
             
             <!-- Search bar -->
             <div class="users-search-container" style="display: flex; gap: 8px; flex-shrink: 0; margin-bottom: 15px;">
-              <input type="text" id="users-search-input" class="form-input" placeholder="Tìm kiếm theo email..." autocomplete="off" style="flex: 1;">
+              <input type="text" id="users-search-input" class="form-input" placeholder="${t('search_email_placeholder')}" autocomplete="off" style="flex: 1;">
               <button id="btn-users-search" class="btn btn-primary" style="width: auto; padding: 0 16px; height: 38px; display: flex; align-items: center; justify-content: center; gap: 6px;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="11" cy="11" r="8"></circle>
                   <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
-                Tìm
+                ${t('search_btn')}
               </button>
             </div>
 
@@ -58,7 +59,7 @@ export const UsersView = {
             <div id="users-list-container" class="users-list-wrapper">
               <div class="list-fallback-state">
                 <div class="spinner" style="margin: 0 auto 12px;"></div>
-                Đang tải danh sách...
+                ${t('loading_members_list')}
               </div>
             </div>
             
@@ -68,7 +69,7 @@ export const UsersView = {
 
           <!-- Middle Column: Selected Users for Chat -->
           <div class="users-section selected-section">
-            <h3 class="section-title">Tạo cuộc trò chuyện</h3>
+            <h3 class="section-title">${t('create_conversation_title')}</h3>
             <div id="selected-users-container" class="selected-users-list"></div>
             <div id="chat-creation-panel" class="chat-creation-form"></div>
           </div>
@@ -82,7 +83,7 @@ export const UsersView = {
                 <line x1="9" y1="9" x2="9.01" y2="9"></line>
                 <line x1="15" y1="9" x2="15.01" y2="9"></line>
               </svg>
-              <p>Chọn một người dùng từ danh sách để quản lý thông tin chi tiết</p>
+              <p>${t('select_user_to_manage')}</p>
             </div>
           </div>
         </div>
@@ -121,7 +122,7 @@ export const UsersView = {
 
     if (searchInput) {
       searchInput.value = '';
-      searchInput.placeholder = 'Tìm kiếm theo email...';
+      searchInput.placeholder = t('search_email_placeholder');
       searchInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
           triggerSearch();
@@ -129,12 +130,8 @@ export const UsersView = {
       });
     }
 
-    // Load initial users list, roles, and current user's extend info
-    await Promise.all([
-      this.loadUsers(),
-      this.loadRoles(),
-      this.loadCurrentUserExtend()
-    ]);
+    // Load initial users list only (roles and current user's extend details are lazy loaded on demand)
+    await this.loadUsers();
 
     // If an ID is provided in query params, load details for that user
     if (this.selectedUserId) {
@@ -142,11 +139,25 @@ export const UsersView = {
     }
   },
 
-  async loadRoles() {
+  async loadRoles(forceRefresh = false) {
+    if (!forceRefresh) {
+      const cachedRoles = sessionStorage.getItem('chat_roles_cache');
+      if (cachedRoles) {
+        try {
+          this.roles = JSON.parse(cachedRoles);
+          return;
+        } catch (e) {
+          console.warn('Failed to parse cached roles:', e);
+          sessionStorage.removeItem('chat_roles_cache');
+        }
+      }
+    }
+
     try {
       const res = await api.get('roles');
       if (res && res.success && Array.isArray(res.data)) {
         this.roles = res.data;
+        sessionStorage.setItem('chat_roles_cache', JSON.stringify(res.data));
       }
     } catch (err) {
       console.error('Failed to load system roles:', err);
@@ -181,7 +192,7 @@ export const UsersView = {
       searchBtn.disabled = true;
       searchBtn.innerHTML = `
         <div class="spinner-sm"></div>
-        Tìm
+        ${t('search_btn')}
       `;
     }
     
@@ -191,7 +202,7 @@ export const UsersView = {
       listWrapper.innerHTML = `
         <div class="list-fallback-state">
           <div class="spinner" style="margin: 0 auto 12px;"></div>
-          ${this.searchTerm ? 'Đang tìm kiếm thành viên...' : 'Đang tải danh sách thành viên...'}
+          ${this.searchTerm ? t('searching_members') : t('loading_members')}
         </div>
       `;
     }
@@ -248,7 +259,7 @@ export const UsersView = {
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           </svg>
-          Tìm
+          ${t('search_btn')}
         `;
       }
 
@@ -266,7 +277,7 @@ export const UsersView = {
     if (filtered.length === 0) {
       listWrapper.innerHTML = `
         <div class="list-fallback-state">
-          Không tìm thấy thành viên nào.
+          ${t('no_members_found_in_list')}
         </div>
       `;
       if (loadMoreContainer) loadMoreContainer.innerHTML = '';
@@ -292,8 +303,8 @@ export const UsersView = {
           ${checkboxHtml}
           <img src="${avatarUrl}" class="user-list-avatar" alt="${user.fullName}">
           <div class="user-list-info">
-            <span class="user-list-name">${user.fullName || 'Chưa cập nhật'}</span>
-            <span class="user-list-username">@${user.username || 'chưa_có'}</span>
+            <span class="user-list-name">${user.fullName || t('not_updated')}</span>
+            <span class="user-list-username">@${user.username || t('no_username')}</span>
           </div>
         </div>
       `;
@@ -304,7 +315,7 @@ export const UsersView = {
       if (this.hasMore) {
         loadMoreContainer.innerHTML = `
           <button id="btn-load-more-users" class="btn btn-secondary" style="font-size: 0.85rem; padding: 10px 15px;">
-            ${this.listLoading ? '<div class="spinner-sm"></div> Đang tải...' : 'Xem thêm'}
+            ${this.listLoading ? '<div class="spinner-sm"></div> ' + t('loading_more') : t('see_more')}
           </button>
         `;
         const loadMoreBtn = document.getElementById('btn-load-more-users');
@@ -399,6 +410,33 @@ export const UsersView = {
         }
       }
 
+      // Lazy load current user extend details for permissions check
+      if (!this.currentUserExtend) {
+        await this.loadCurrentUserExtend();
+      }
+
+      // Load cached roles if not in memory
+      if (!this.roles || this.roles.length === 0) {
+        await this.loadRoles(false);
+      }
+
+      // Check if both my own role ID and the target user's role ID are present in the cached roles
+      const myRoleId = this.currentUserExtend ? this.currentUserExtend.roleId : null;
+      const targetRoleId = extend ? extend.roleId : null;
+
+      let needRolesRefresh = false;
+      if (myRoleId && (!this.roles || !this.roles.find(r => String(r.roleId) === String(myRoleId)))) {
+        needRolesRefresh = true;
+      }
+      if (targetRoleId && (!this.roles || !this.roles.find(r => String(r.roleId) === String(targetRoleId)))) {
+        needRolesRefresh = true;
+      }
+
+      if (needRolesRefresh) {
+        console.log('[Users] Role ID not found in cache. Refreshing roles cache...');
+        await this.loadRoles(true);
+      }
+
       if (profile) {
         this.selectedUserDetail = {
           profile,
@@ -411,11 +449,13 @@ export const UsersView = {
           dashboard.classList.add('show-details');
         }
       } else {
-        this.detailsError = 'Không lấy được hồ sơ chi tiết của người dùng từ máy chủ.';
+        this.selectedUserId = null;
+        this.detailsError = t('load_user_detail_failed');
       }
     } catch (err) {
       console.error(err);
-      this.detailsError = err.message || 'Lỗi kết nối máy chủ.';
+      this.selectedUserId = null;
+      this.detailsError = err.message || t('server_connection_error');
     } finally {
       this.detailsLoading = false;
       this.renderDetails();
@@ -430,7 +470,7 @@ export const UsersView = {
       detailsPanel.innerHTML = `
         <div class="details-loading-state">
           <div class="spinner"></div>
-          <p>Đang tải thông tin chi tiết người dùng...</p>
+          <p>${t('loading_user_details')}</p>
         </div>
       `;
     }
@@ -463,7 +503,7 @@ export const UsersView = {
             <line x1="9" y1="9" x2="9.01" y2="9"></line>
             <line x1="15" y1="9" x2="15.01" y2="9"></line>
           </svg>
-          <p>Chọn một người dùng để xem thông tin chi tiết</p>
+          <p>${t('select_user_to_view_details')}</p>
         </div>
       `;
       return;
@@ -473,8 +513,8 @@ export const UsersView = {
     const defaultAvatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150';
     
     const avatarUrl = profile.avatarUrl || defaultAvatar;
-    const fullName = profile.fullName || 'Chưa cập nhật';
-    const username = profile.username ? `@${profile.username}` : '@chưa_có';
+    const fullName = profile.fullName || t('not_updated');
+    const username = profile.username ? `@${profile.username}` : `@${t('no_username')}`;
     const userId = profile.userId || (extend && extend.userId) || 'N/A';
     
     const birthdayStr = this.formatDate(profile.birthday);
@@ -499,7 +539,7 @@ export const UsersView = {
             <line x1="19" y1="12" x2="5" y2="12"></line>
             <polyline points="12 19 5 12 12 5"></polyline>
           </svg>
-          Quay lại danh sách
+          ${t('back_to_list')}
         </button>
 
         <!-- Info Card Banner -->
@@ -522,22 +562,22 @@ export const UsersView = {
         <div class="user-detail-grid">
           <!-- Profile info card -->
           <div class="user-detail-pane">
-            <h4 class="pane-title">Thông tin cá nhân</h4>
+            <h4 class="pane-title">${t('personal_info')}</h4>
             <div class="pane-details-list">
               <div class="pane-detail-item">
-                <span class="pane-detail-label">Mã định danh (ID):</span>
+                <span class="pane-detail-label">${t('user_id_label')}</span>
                 <span class="pane-detail-value"><code>${userId}</code></span>
               </div>
               <div class="pane-detail-item">
-                <span class="pane-detail-label">Ngày sinh:</span>
+                <span class="pane-detail-label">${t('dob_label')}:</span>
                 <span class="pane-detail-value">${birthdayStr}</span>
               </div>
               <div class="pane-detail-item">
-                <span class="pane-detail-label">Giới tính:</span>
+                <span class="pane-detail-label">${t('gender_label')}:</span>
                 <span class="pane-detail-value">${genderStr}</span>
               </div>
               <div class="pane-detail-item">
-                <span class="pane-detail-label">Cập nhật lúc:</span>
+                <span class="pane-detail-label">${t('updated_at_label')}</span>
                 <span class="pane-detail-value">${updatedAtStr}</span>
               </div>
             </div>
@@ -545,22 +585,22 @@ export const UsersView = {
 
           <!-- Emails panel -->
           <div class="user-detail-pane">
-            <h4 class="pane-title">Email liên kết</h4>
+            <h4 class="pane-title">${t('linked_emails_label')}</h4>
             <div class="pane-emails-list" style="max-height: 180px; overflow-y: auto;">
               ${emails.length > 0
                 ? emails.map(email => {
                     const verifiedClass = email.verified ? 'verified-tag' : 'unverified-tag';
-                    const verifiedText = email.verified ? 'Đã xác minh' : 'Chưa xác minh';
+                    const verifiedText = email.verified ? t('status_verified_tag') : t('status_unverified_tag');
                     return `
                       <div class="pane-email-item">
                         <div class="pane-email-info">
                           <span class="pane-email-address" title="${email.emailName || 'N/A'}">${email.emailName || 'N/A'}</span>
-                          <span class="pane-email-date">Lên lịch: ${this.formatDate(email.createdAt)}</span>
+                          <span class="pane-email-date">${t('linked_at')} ${this.formatDate(email.createdAt)}</span>
                         </div>
                         <div class="pane-email-actions">
                           <span class="email-status-badge ${verifiedClass}">${verifiedText}</span>
                           ${this.hasPermission('DELETE_EMAIL') ? `
-                            <button class="btn-delete-email" data-id="${email.emailId || email.id || ''}" data-email="${email.emailName}" title="Xóa email">
+                            <button class="btn-delete-email" data-id="${email.emailId || email.id || ''}" data-email="${email.emailName}" title="${t('delete')}">
                               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="3 6 5 6 21 6"></polyline>
                                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -573,20 +613,20 @@ export const UsersView = {
                       </div>
                     `;
                   }).join('')
-                : `<div class="pane-no-emails">Không có email liên kết.</div>`
+                : `<div class="pane-no-emails">${t('no_linked_emails_details')}</div>`
               }
             </div>
             
             <!-- Form thêm email mới -->
             ${this.hasPermission('ADD_EMAIL') ? `
               <form id="add-email-form" class="add-email-row">
-                <input type="email" id="new-email-input" class="form-input" placeholder="Nhập email mới..." required style="flex: 1; font-size: 0.85rem; padding: 8px 12px;">
+                <input type="email" id="new-email-input" class="form-input" placeholder="${t('new_email_placeholder')}" required style="flex: 1; font-size: 0.85rem; padding: 8px 12px;">
                 <button type="submit" class="btn btn-primary" style="padding: 0 14px; font-size: 0.85rem; width: auto; height: 36px; display: flex; align-items: center; justify-content: center; gap: 4px;">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="12" y1="5" x2="12" y2="19"></line>
                     <line x1="5" y1="12" x2="19" y2="12"></line>
                   </svg>
-                  Thêm
+                  ${t('add_btn')}
                 </button>
               </form>
             ` : ''}
@@ -600,20 +640,20 @@ export const UsersView = {
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
               </svg>
-              Quản trị quyền hạn & Trạng thái
+              ${t('admin_panel_title')}
             </h4>
             
             <form id="admin-update-form" class="admin-form-layout">
               <div class="form-row">
                 <!-- Select Role -->
                 <div class="form-group">
-                  <label class="form-label" for="admin-select-role">Vai trò (Role)</label>
+                  <label class="form-label" for="admin-select-role">${t('role_label')}</label>
                   <select id="admin-select-role" class="form-input select-input">
                     ${this.roles
                       .filter(r => !r.deletedAt || String(r.roleId) === String(currentRoleId))
                       .map(r => {
                         const isDeleted = r.deletedAt !== null && r.deletedAt !== undefined;
-                        const displayName = isDeleted ? `${r.roleName} (Đã xóa)` : r.roleName;
+                        const displayName = isDeleted ? `${r.roleName} (${t('deleted_badge')})` : r.roleName;
                         return `
                           <option value="${r.roleId}" ${String(r.roleId) === String(currentRoleId) ? 'selected' : ''}>
                             ${displayName}
@@ -625,24 +665,24 @@ export const UsersView = {
 
                 <!-- Select Status -->
                 <div class="form-group">
-                  <label class="form-label" for="admin-select-status">Trạng thái tài khoản</label>
+                  <label class="form-label" for="admin-select-status">${t('account_status')}</label>
                   <select id="admin-select-status" class="form-input select-input">
-                    <option value="ACTIVE" ${accountStatus === 'ACTIVE' ? 'selected' : ''}>Hoạt động (ACTIVE)</option>
-                    <option value="LOCKED" ${accountStatus === 'LOCKED' ? 'selected' : ''}>Bị khóa (LOCKED)</option>
-                    <option value="BANNED" ${accountStatus === 'BANNED' ? 'selected' : ''}>Bị cấm (BANNED)</option>
+                    <option value="ACTIVE" ${accountStatus === 'ACTIVE' ? 'selected' : ''}>${t('status_active_opt')}</option>
+                    <option value="LOCKED" ${accountStatus === 'LOCKED' ? 'selected' : ''}>${t('status_locked_opt')}</option>
+                    <option value="BANNED" ${accountStatus === 'BANNED' ? 'selected' : ''}>${t('status_banned_opt')}</option>
                   </select>
                 </div>
               </div>
 
               <!-- Banned expiration (Only visible when BANNED is selected) -->
               <div class="form-group" id="ban-expiry-row" style="display: ${accountStatus === 'BANNED' ? 'block' : 'none'};">
-                <label class="form-label" for="admin-ban-expiry">Hạn cấm đến ngày (Bắt buộc khi Banned)</label>
+                <label class="form-label" for="admin-ban-expiry">${t('ban_expiry_label')}</label>
                 <input type="datetime-local" id="admin-ban-expiry" class="form-input">
               </div>
 
               <div style="margin-top: 15px;">
                 <button type="submit" class="btn btn-primary" style="width: auto; padding: 10px 24px;">
-                  Cập nhật cấu hình
+                  ${t('update_config')}
                 </button>
               </div>
             </form>
@@ -732,8 +772,8 @@ export const UsersView = {
         const rawExpiry = expiryInput.value;
         if (!rawExpiry) {
           await showDialog({
-            title: 'Lỗi nhập dữ liệu',
-            message: 'Vui lòng chọn thời gian hết hạn cấm tài khoản (expireAt).',
+            title: t('data_input_error'),
+            message: t('ban_expiry_required'),
             type: 'warning'
           });
           return;
@@ -742,8 +782,8 @@ export const UsersView = {
           expireAt = new Date(rawExpiry).toISOString();
         } catch (err) {
           await showDialog({
-            title: 'Ngày giờ không hợp lệ',
-            message: 'Vui lòng chọn đúng định dạng ngày giờ.',
+            title: t('invalid_datetime'),
+            message: t('invalid_datetime_format'),
             type: 'error'
           });
           return;
@@ -753,7 +793,7 @@ export const UsersView = {
       // Show loader overlay
       const overlay = document.getElementById('users-loading-overlay');
       const overlayText = document.getElementById('users-loading-text');
-      const toggleOverlay = (isActive, msg = 'Đang cập nhật...') => {
+      const toggleOverlay = (isActive, msg = t('updating_config_overlay')) => {
         if (overlayText) overlayText.textContent = msg;
         if (overlay) {
           if (isActive) overlay.classList.add('active');
@@ -761,7 +801,7 @@ export const UsersView = {
         }
       };
 
-      toggleOverlay(true, 'Đang cập nhật quyền & trạng thái...');
+      toggleOverlay(true, t('updating_role_status'));
 
       try {
         const payload = {
@@ -777,10 +817,10 @@ export const UsersView = {
 
         if (patchResponse && patchResponse.success) {
           await showDialog({
-            title: 'Cập nhật thành công',
-            message: 'Đã thay đổi quyền hạn và trạng thái của người dùng thành công.',
+            title: t('update_success_title'),
+            message: t('user_update_success_msg'),
             type: 'success',
-            buttons: [{ text: 'Đóng', type: 'primary', value: true }]
+            buttons: [{ text: t('close'), type: 'primary', value: true }]
           });
 
           // Update local state instead of reloading API
@@ -803,8 +843,8 @@ export const UsersView = {
           this.renderDetails();
         } else {
           await showDialog({
-            title: 'Lỗi cập nhật',
-            message: patchResponse?.message || 'Không thể lưu thay đổi người dùng.',
+            title: t('update_error_title'),
+            message: patchResponse?.message || t('user_update_failed_msg'),
             type: 'error'
           });
         }
@@ -812,8 +852,8 @@ export const UsersView = {
         toggleOverlay(false);
         console.error(err);
         await showDialog({
-          title: 'Lỗi hệ thống',
-          message: err.message || 'Có lỗi hệ thống xảy ra khi gửi yêu cầu.',
+          title: t('system_error_title'),
+          message: err.message || t('system_error_request_msg'),
           type: 'error'
         });
       }
@@ -836,7 +876,7 @@ export const UsersView = {
         // Show loader overlay
         const overlay = document.getElementById('users-loading-overlay');
         const overlayText = document.getElementById('users-loading-text');
-        const toggleOverlay = (isActive, msg = 'Đang thực hiện...') => {
+        const toggleOverlay = (isActive, msg = t('processing')) => {
           if (overlayText) overlayText.textContent = msg;
           if (overlay) {
             if (isActive) overlay.classList.add('active');
@@ -844,7 +884,7 @@ export const UsersView = {
           }
         };
 
-        toggleOverlay(true, 'Đang liên kết email mới...');
+        toggleOverlay(true, t('linking_new_email'));
 
         try {
           // POST to emails/{userId}
@@ -862,10 +902,10 @@ export const UsersView = {
             }
 
             await showDialog({
-              title: 'Thêm email thành công',
-              message: `Đã liên kết email "${emailName}" thành công.`,
+              title: t('add_email_success_title'),
+              message: t('email_linked_success_msg').replace('{email}', emailName),
               type: 'success',
-              buttons: [{ text: 'Đóng', type: 'primary', value: true }]
+              buttons: [{ text: t('close'), type: 'primary', value: true }]
             });
             
             // Clear input and re-render user details locally (no reload)
@@ -873,8 +913,8 @@ export const UsersView = {
             this.renderDetails();
           } else {
             await showDialog({
-              title: 'Lỗi thêm email',
-              message: response?.message || 'Không thể liên kết email mới.',
+              title: t('add_email_failed_title'),
+              message: response?.message || t('email_link_failed_msg'),
               type: 'error'
             });
           }
@@ -882,8 +922,8 @@ export const UsersView = {
           toggleOverlay(false);
           console.error(err);
           await showDialog({
-            title: 'Lỗi hệ thống',
-            message: err.message || 'Có lỗi hệ thống xảy ra khi gửi yêu cầu.',
+            title: t('system_error_title'),
+            message: err.message || t('system_error_request_msg'),
             type: 'error'
           });
         }
@@ -898,12 +938,12 @@ export const UsersView = {
         if (!emailId) return;
 
         const confirmDelete = await showDialog({
-          title: 'Xác nhận xóa email',
-          message: `Bạn có chắc chắn muốn hủy liên kết email "${emailName}" khỏi tài khoản này không?`,
+          title: t('confirm_delete_email_title'),
+          message: t('delete_email_confirm_msg').replace('{email}', emailName),
           type: 'warning',
           buttons: [
-            { text: 'Hủy', type: 'secondary', value: false },
-            { text: 'Xóa', type: 'danger', value: true }
+            { text: t('cancel'), type: 'secondary', value: false },
+            { text: t('delete'), type: 'danger', value: true }
           ]
         });
 
@@ -912,7 +952,7 @@ export const UsersView = {
         // Show loader overlay
         const overlay = document.getElementById('users-loading-overlay');
         const overlayText = document.getElementById('users-loading-text');
-        const toggleOverlay = (isActive, msg = 'Đang thực hiện...') => {
+        const toggleOverlay = (isActive, msg = t('processing')) => {
           if (overlayText) overlayText.textContent = msg;
           if (overlay) {
             if (isActive) overlay.classList.add('active');
@@ -920,7 +960,7 @@ export const UsersView = {
           }
         };
 
-        toggleOverlay(true, 'Đang hủy liên kết email...');
+        toggleOverlay(true, t('unlinking_email'));
 
         try {
           // DELETE to emails/{emailId}
@@ -929,10 +969,10 @@ export const UsersView = {
 
           if (response && response.success) {
             await showDialog({
-              title: 'Xóa email thành công',
-              message: `Đã hủy liên kết email "${emailName}" thành công.`,
+              title: t('delete_email_success_title'),
+              message: t('email_deleted_success_msg').replace('{email}', emailName),
               type: 'success',
-              buttons: [{ text: 'Đóng', type: 'primary', value: true }]
+              buttons: [{ text: t('close'), type: 'primary', value: true }]
             });
 
             // Filter out deleted email from local array and re-render (no reload)
@@ -944,8 +984,8 @@ export const UsersView = {
             this.renderDetails();
           } else {
             await showDialog({
-              title: 'Lỗi xóa email',
-              message: response?.message || 'Không thể hủy liên kết email.',
+              title: t('delete_email_failed_title'),
+              message: response?.message || t('email_delete_failed_msg'),
               type: 'error'
             });
           }
@@ -953,8 +993,8 @@ export const UsersView = {
           toggleOverlay(false);
           console.error(err);
           await showDialog({
-            title: 'Lỗi hệ thống',
-            message: err.message || 'Có lỗi hệ thống xảy ra khi gửi yêu cầu.',
+            title: t('system_error_title'),
+            message: err.message || t('system_error_request_msg'),
             type: 'error'
           });
         }
@@ -981,7 +1021,7 @@ export const UsersView = {
             <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
             <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
           </svg>
-          <p>Chưa chọn thành viên nào. Tick chọn các thành viên bên danh sách để bắt đầu.</p>
+          <p>${t('no_members_selected_chat')}</p>
         </div>
       `;
       creationPanel.innerHTML = '';
@@ -1004,7 +1044,7 @@ export const UsersView = {
             <img src="${avatarUrl}" class="selected-user-avatar" alt="${user.fullName}">
             <span class="selected-user-name" title="${user.fullName}">${user.fullName}</span>
           </div>
-          <button class="btn-remove-selected" data-id="${userId}" title="Bỏ chọn">
+          <button class="btn-remove-selected" data-id="${userId}" title="${t('deselect')}">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -1048,15 +1088,15 @@ export const UsersView = {
                 <circle cx="8.5" cy="8.5" r="1.5"></circle>
                 <polyline points="21 15 16 10 5 21"></polyline>
               </svg>
-              Chọn ảnh đại diện
+              ${t('choose_avatar')}
             </button>
           </div>
           <div class="form-group">
-            <label class="form-label" for="chat-title-input" style="font-size: 0.8rem; margin-bottom: 4px;">Tên nhóm trò chuyện</label>
-            <input type="text" id="chat-title-input" class="form-input" placeholder="Nhập tên nhóm..." style="font-size: 0.85rem; padding: 8px 12px; height: 36px;">
+            <label class="form-label" for="chat-title-input" style="font-size: 0.8rem; margin-bottom: 4px;">${t('group_name_label')}</label>
+            <input type="text" id="chat-title-input" class="form-input" placeholder="${t('group_name_placeholder')}" style="font-size: 0.85rem; padding: 8px 12px; height: 36px;">
           </div>
           <button type="submit" class="btn btn-primary" style="margin-top: 5px; width: 100%; padding: 10px; font-size: 0.85rem; height: 38px; display: flex; align-items: center; justify-content: center;">
-            Tạo nhóm trò chuyện
+            ${t('create_group_chat_btn')}
           </button>
         </form>
       `;
@@ -1088,7 +1128,7 @@ export const UsersView = {
     } else {
       creationPanel.innerHTML = `
         <button id="btn-create-direct-chat" class="btn btn-primary" style="width: 100%; padding: 10px; font-size: 0.85rem; height: 38px; display: flex; align-items: center; justify-content: center;">
-          Tạo cuộc trò chuyện 1-1
+          ${t('create_direct_chat_btn')}
         </button>
       `;
 
@@ -1108,7 +1148,7 @@ export const UsersView = {
     // Show loading overlay
     const overlay = document.getElementById('users-loading-overlay');
     const overlayText = document.getElementById('users-loading-text');
-    const toggleOverlay = (isActive, msg = 'Đang thực hiện...') => {
+    const toggleOverlay = (isActive, msg = t('processing')) => {
       if (overlayText) overlayText.textContent = msg;
       if (overlay) {
         if (isActive) overlay.classList.add('active');
@@ -1125,7 +1165,7 @@ export const UsersView = {
       title = titleInput ? titleInput.value.trim() || null : null;
 
       if (this.selectedGroupAvatarFile) {
-        toggleOverlay(true, 'Đang tải ảnh đại diện nhóm...');
+        toggleOverlay(true, t('uploading_group_avatar'));
         try {
           const res = await api.uploadImage(this.selectedGroupAvatarFile, 'avatars');
           if (res && res.success && res.data) {
@@ -1134,8 +1174,8 @@ export const UsersView = {
           } else {
             toggleOverlay(false);
             await showDialog({
-              title: 'Lỗi tải ảnh',
-              message: res?.message || 'Không thể tải ảnh đại diện lên.',
+              title: t('upload_image_failed_title'),
+              message: res?.message || t('upload_group_avatar_failed_msg'),
               type: 'error'
             });
             return;
@@ -1144,8 +1184,8 @@ export const UsersView = {
           toggleOverlay(false);
           console.error(uploadErr);
           await showDialog({
-            title: 'Lỗi tải ảnh',
-            message: 'Đã xảy ra lỗi khi tải ảnh đại diện nhóm lên.',
+            title: t('upload_image_failed_title'),
+            message: t('upload_group_avatar_error_msg'),
             type: 'error'
           });
           return;
@@ -1156,7 +1196,7 @@ export const UsersView = {
     // Build userConversations array
     const userConversations = selectedUserIds.map(userId => ({ userId }));
 
-    toggleOverlay(true, 'Đang tạo cuộc trò chuyện...');
+    toggleOverlay(true, t('creating_conversation'));
 
     try {
       const payload = {
@@ -1172,10 +1212,10 @@ export const UsersView = {
 
       if (res && res.success) {
         await showDialog({
-          title: 'Tạo thành công',
-          message: 'Đã tạo cuộc trò chuyện thành công.',
+          title: t('create_conversation_success_title'),
+          message: t('create_conversation_success_msg'),
           type: 'success',
-          buttons: [{ text: 'Đến trò chuyện', type: 'primary', value: true }]
+          buttons: [{ text: t('go_to_chat_btn'), type: 'primary', value: true }]
         });
 
         // Reset Selection state
@@ -1194,8 +1234,8 @@ export const UsersView = {
         }
       } else {
         await showDialog({
-          title: 'Lỗi tạo cuộc trò chuyện',
-          message: res?.message || 'Không thể tạo cuộc trò chuyện.',
+          title: t('create_conversation_failed_title'),
+          message: res?.message || t('create_conversation_failed_msg'),
           type: 'error'
         });
       }
@@ -1203,30 +1243,32 @@ export const UsersView = {
       toggleOverlay(false);
       console.error(err);
       await showDialog({
-        title: 'Lỗi hệ thống',
-        message: err.message || 'Đã có lỗi hệ thống xảy ra.',
+        title: t('system_error_title'),
+        message: err.message || t('system_error_generic_msg'),
         type: 'error'
       });
     }
   },
 
   formatDate(dateStr) {
-    if (!dateStr) return 'Chưa cập nhật';
+    if (!dateStr) return t('not_updated');
     try {
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return dateStr;
-      return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      const lang = localStorage.getItem('chat_lang') || 'vi';
+      return d.toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-US', { day: '2-digit', month: '2-digit', year: 'numeric' });
     } catch (e) {
       return dateStr;
     }
   },
 
   formatDateTime(instantStr) {
-    if (!instantStr) return 'Chưa cập nhật';
+    if (!instantStr) return t('not_updated');
     try {
       const d = new Date(instantStr);
       if (isNaN(d.getTime())) return instantStr;
-      return d.toLocaleString('vi-VN', {
+      const lang = localStorage.getItem('chat_lang') || 'vi';
+      return d.toLocaleString(lang === 'vi' ? 'vi-VN' : 'en-US', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
@@ -1239,22 +1281,22 @@ export const UsersView = {
   },
 
   formatGender(gender) {
-    if (!gender) return 'Chưa cập nhật';
+    if (!gender) return t('not_updated');
     const mapping = {
-      MALE: 'Nam',
-      FEMALE: 'Nữ',
-      OTHER: 'Khác'
+      MALE: t('gender_male'),
+      FEMALE: t('gender_female'),
+      OTHER: t('gender_other')
     };
     return mapping[String(gender).toUpperCase()] || gender;
   },
 
   formatStatus(status) {
-    if (!status) return 'Chưa xác thực';
+    if (!status) return t('status_unverified_tag');
     const mapping = {
-      ACTIVE: 'Đang hoạt động',
-      LOCKED: 'Đã khóa',
-      BANNED: 'Đã bị cấm',
-      PENDING: 'Đang chờ duyệt'
+      ACTIVE: t('status_active'),
+      LOCKED: t('status_locked'),
+      BANNED: t('status_banned'),
+      PENDING: t('status_pending')
     };
     return mapping[String(status).toUpperCase()] || status;
   }

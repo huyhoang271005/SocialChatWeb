@@ -1,14 +1,22 @@
 /* User Management Dashboard Stylesheet */
 
 .users-dashboard {
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  max-width: 1100px;
+  max-width: 100%;
   margin: 0 auto;
+  min-height: 100%;
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: none;
+  border-radius: 0;
+  padding: 30px;
+  box-shadow: none;
   position: relative;
   overflow: hidden;
   animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  flex-direction: column;
 }
 
 .users-header {
@@ -103,9 +111,8 @@
     margin-bottom: 16px;
   }
 
-  /* Spacing optimizations */
   .users-dashboard {
-    padding: 0;
+    padding: 16px;
   }
 
   .users-header {
@@ -116,12 +123,10 @@
 
 /* Sections */
 .users-section {
-  background: var(--bg-card);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: hsla(230, 25%, 6%, 0.3);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.20);
+  border-radius: var(--radius-md);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   overflow: hidden;

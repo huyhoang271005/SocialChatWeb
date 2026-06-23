@@ -2,25 +2,56 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="70a16e7e-4c5f-4335-91a1-c3a4263fefce" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/android-chrome-192x192.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/android-chrome-512x512.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/apple-touch-icon.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/favicon-16x16.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/favicon-32x32.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/js/core/i18n.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/js/core/i18n/en.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/js/core/i18n/i18n.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/js/core/i18n/vi.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/modules/chat/home/components/chat-frame.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/modules/chat/home/components/chat-header.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/modules/chat/home/components/chat-messages.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/modules/chat/home/modals/add-member-modal.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/modules/chat/home/modals/edit-conversation-modal.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/modules/chat/home/modals/view-members-modal.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/css/common.css" beforeDir="false" afterPath="$PROJECT_DIR$/css/common.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/css/sidebar.css" beforeDir="false" afterPath="$PROJECT_DIR$/css/sidebar.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/firebase-messaging-sw.js" beforeDir="false" afterPath="$PROJECT_DIR$/firebase-messaging-sw.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/favicon.ico" beforeDir="false" afterPath="$PROJECT_DIR$/favicon.ico" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/index.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/js/core/api.js" beforeDir="false" afterPath="$PROJECT_DIR$/js/core/api.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/js/core/config.js" beforeDir="false" afterPath="$PROJECT_DIR$/js/core/config.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/js/core/firebase.js" beforeDir="false" afterPath="$PROJECT_DIR$/js/core/firebase.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/js/core/router.js" beforeDir="false" afterPath="$PROJECT_DIR$/js/core/router.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/js/core/websocket.js" beforeDir="false" afterPath="$PROJECT_DIR$/js/core/websocket.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/modules/chat/home/chat-frame.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/chat/home/chat-frame.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/modules/chat/home/conversation-handler.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/chat/home/conversation-handler.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/modules/chat/home/conversations.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/chat/home/conversations.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/manifest.json" beforeDir="false" afterPath="$PROJECT_DIR$/manifest.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/auth/login/login.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/auth/login/login.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/auth/register/register.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/auth/register/register.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/auth/register/step1.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/auth/register/step1.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/auth/register/step2.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/auth/register/step2.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/auth/register/step3.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/auth/register/step3.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/auth/reset-password/reset-password.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/auth/reset-password/reset-password.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/auth/verify/verify.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/auth/verify/verify.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/chat/home/attachment-handler.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/chat/home/handlers/attachment-handler.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/chat/home/chat-frame.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/chat/home/conversation-handler.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/chat/home/handlers/conversation-handler.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/chat/home/conversations.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/chat/home/components/conversations.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/modules/chat/home/home.css" beforeDir="false" afterPath="$PROJECT_DIR$/modules/chat/home/home.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/modules/chat/home/home.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/chat/home/home.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/modules/chat/home/message-loader.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/chat/home/message-loader.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/modules/chat/home/message-sender.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/chat/home/message-sender.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/modules/chat/home/offline-queue-handler.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/chat/home/offline-queue-handler.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/modules/chat/home/socket-event-handler.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/chat/home/socket-event-handler.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/modules/chat/home/toast.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/chat/home/message-loader.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/chat/home/handlers/message-loader.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/chat/home/message-seen-resolver.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/chat/home/handlers/message-seen-resolver.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/chat/home/message-sender.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/chat/home/handlers/message-sender.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/chat/home/offline-queue-handler.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/chat/home/handlers/offline-queue-handler.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/chat/home/socket-event-handler.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/chat/home/handlers/socket-event-handler.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/chat/home/voice-recorder.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/chat/home/handlers/voice-recorder.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/profile/profile.css" beforeDir="false" afterPath="$PROJECT_DIR$/modules/profile/profile.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/profile/profile.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/profile/profile.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/roles/roles.css" beforeDir="false" afterPath="$PROJECT_DIR$/modules/roles/roles.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/roles/roles.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/roles/roles.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/sessions/sessions.css" beforeDir="false" afterPath="$PROJECT_DIR$/modules/sessions/sessions.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/sessions/sessions.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/sessions/sessions.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/users/users.css" beforeDir="false" afterPath="$PROJECT_DIR$/modules/users/users.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/modules/users/users.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/users/users.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -31,12 +62,18 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/huyhoang271005/SocialChatWeb.git",
-    "accountId": "ef4b2156-02f6-4809-8639-b1d80fd13e0a"
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;huyhoang271005&quot;
   }
-}]]></component>
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/huyhoang271005/SocialChatWeb.git&quot;,
+    &quot;accountId&quot;: &quot;ef4b2156-02f6-4809-8639-b1d80fd13e0a&quot;
+  }
+}</component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 5,
   &quot;fromUser&quot;: false
@@ -105,7 +142,13 @@
       <workItem from="1781887656996" duration="4198000" />
       <workItem from="1781934839967" duration="3253000" />
       <workItem from="1781965694292" duration="5363000" />
-      <workItem from="1782022624906" duration="3273000" />
+      <workItem from="1782022624906" duration="3871000" />
+      <workItem from="1782063743818" duration="4064000" />
+      <workItem from="1782108601234" duration="7962000" />
+      <workItem from="1782140917777" duration="9934000" />
+      <workItem from="1782184579832" duration="2249000" />
+      <workItem from="1782190262029" duration="2349000" />
+      <workItem from="1782206645204" duration="4407000" />
     </task>
     <servers />
   </component>

@@ -3,13 +3,13 @@
   display: flex;
   width: 100%;
   max-width: 100%;
-  height: 92vh;
-  min-height: 500px;
+  height: 100%;
+  min-height: 100%;
   background: var(--bg-card);
   backdrop-filter: blur(16px);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
   overflow: hidden;
   animation: slide-up-fade 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
@@ -65,11 +65,25 @@
   padding: 15px 20px;
   cursor: pointer;
   transition: var(--transition-smooth);
+  /* Prevent text selection & browser callout on long-press */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .conversation-item:hover,
 .conversation-item.active {
   background-color: hsla(230, 25%, 20%, 0.35);
+}
+
+.conversation-item.unread .conversation-preview {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.conversation-item.unread .conversation-name {
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .conversation-avatar-wrapper {
@@ -83,7 +97,108 @@
   object-fit: cover;
 }
 
-.status-badge {
+/* Composite Avatar styles */
+.composite-avatar {
+  position: relative !important;
+  border-radius: 50%;
+  overflow: visible !important;
+  background: transparent !important;
+}
+
+.composite-avatar-item {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid var(--bg-card, #0b0f19);
+  box-sizing: border-box;
+  object-fit: cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-primary, #ffffff);
+  background-color: hsla(230, 25%, 15%, 0.95);
+  transition: all 0.2s ease;
+}
+
+.composite-avatar-item.count-badge {
+  background: var(--accent-gradient, linear-gradient(135deg, #6366f1, #a855f7));
+  color: #ffffff;
+  font-size: 0.7rem;
+  user-select: none;
+}
+
+/* Layout for 2 items */
+.composite-avatar.layout-2 .composite-avatar-item:nth-child(1) {
+  width: 62%;
+  height: 62%;
+  left: 0;
+  top: 0;
+  z-index: 2;
+}
+.composite-avatar.layout-2 .composite-avatar-item:nth-child(2) {
+  width: 62%;
+  height: 62%;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+}
+
+/* Layout for 3 items */
+.composite-avatar.layout-3 .composite-avatar-item:nth-child(1) {
+  width: 54%;
+  height: 54%;
+  left: 23%;
+  top: 0;
+  z-index: 3;
+}
+.composite-avatar.layout-3 .composite-avatar-item:nth-child(2) {
+  width: 54%;
+  height: 54%;
+  left: 0;
+  bottom: 0;
+  z-index: 2;
+}
+.composite-avatar.layout-3 .composite-avatar-item:nth-child(3) {
+  width: 54%;
+  height: 54%;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+}
+
+/* Layout for 4 items */
+.composite-avatar.layout-4 .composite-avatar-item:nth-child(1) {
+  width: 48%;
+  height: 48%;
+  left: 0;
+  top: 0;
+  z-index: 4;
+}
+.composite-avatar.layout-4 .composite-avatar-item:nth-child(2) {
+  width: 48%;
+  height: 48%;
+  right: 0;
+  top: 0;
+  z-index: 3;
+}
+.composite-avatar.layout-4 .composite-avatar-item:nth-child(3) {
+  width: 48%;
+  height: 48%;
+  left: 0;
+  bottom: 0;
+  z-index: 2;
+}
+.composite-avatar.layout-4 .composite-avatar-item:nth-child(4) {
+  width: 48%;
+  height: 48%;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+}
+
+
+.conversation-avatar-wrapper .status-badge {
   position: absolute;
   bottom: 2px;
   right: 2px;
@@ -93,7 +208,7 @@
   border: 2px solid var(--bg-secondary);
 }
 
-.status-badge.online {
+.conversation-avatar-wrapper .status-badge.online {
   background-color: var(--success);
 }
 
@@ -111,6 +226,12 @@
 .conversation-name {
   font-size: 0.9rem;
   font-weight: 600;
+  max-width: 140px;
+  overflow: hidden;
+  min-width: 0;
+  flex: 1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .conversation-time {
@@ -165,7 +286,68 @@
   font-size: 0.92rem;
   line-height: 1.4;
   word-break: break-word;
+  /* Prevent text selection & browser callout on long-press */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
+
+/* Image/Video media message bubbles overrides */
+.message-bubble.message-media,
+body.light-theme .message-bubble.message-media {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+  overflow: visible;
+}
+
+.message-bubble.message-media .message-image {
+  max-width: 100%;
+  max-height: 400px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.25));
+  display: block;
+  margin-bottom: 4px;
+  cursor: pointer;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.message-bubble.message-media .message-image:hover {
+  transform: scale(1.015);
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.35));
+}
+
+.message-bubble.message-media .message-video {
+  max-width: 100%;
+  max-height: 400px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  display: block;
+  margin-bottom: 4px;
+  outline: none;
+}
+
+.message-bubble.message-media .message-time {
+  color: var(--text-muted) !important;
+  margin-top: 4px;
+}
+
+@media (max-width: 768px) {
+  .message-bubble.message-media .message-image,
+  .message-bubble.message-media .message-video {
+    max-width: 100%;
+    max-height: 300px;
+  }
+}
+
 
 .message-incoming {
   background-color: hsla(230, 25%, 20%, 0.45);
@@ -312,6 +494,35 @@
 
   .message-bubble {
     max-width: 85%;
+  }
+
+  .conversation-preview {
+    max-width: 270px;
+  }
+
+  .conversation-name {
+    max-width: 240px;
+  }
+
+  /* Hide 3-dot buttons on mobile for conversations and messages (use long-press instead) */
+  .desktop-convo-options,
+  .desktop-msg-options {
+    display: none !important;
+  }
+
+  /* Show message options dropdown positioned better on mobile */
+  .message-dropdown-menu {
+    min-width: 150px;
+    right: 0;
+    left: auto !important;
+  }
+  .message-bubble-wrapper .message-dropdown-menu {
+    bottom: auto;
+    top: 0;
+  }
+  /* Ensure conversation name truncates properly */
+  .conversation-name span {
+    max-width: 100%;
   }
 }
 
@@ -1180,4 +1391,96 @@
 .message-dropdown-menu .dropdown-item.btn-reply-message:hover {
   background-color: hsla(230, 25%, 20%, 0.4);
   color: var(--accent-color);
+}
+
+/* Light Theme Chat overrides */
+body.light-theme .chat-dashboard {
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+}
+
+body.light-theme .message-incoming {
+  background-color: hsla(230, 20%, 85%, 0.55);
+}
+
+body.light-theme .conversation-item:hover,
+body.light-theme .conversation-item.active {
+  background-color: hsla(230, 25%, 100%, 0.65);
+}
+
+body.light-theme .member-list-item {
+  background: hsla(230, 25%, 100%, 0.5);
+}
+
+body.light-theme .users-list-wrapper .user-list-card {
+  background: hsla(230, 25%, 100%, 0.55);
+}
+
+body.light-theme .users-list-wrapper .user-list-card:hover {
+  background: hsla(230, 25%, 100%, 0.85);
+}
+
+body.light-theme .btn-convo-options:hover,
+body.light-theme .btn-chat-options:hover {
+  background-color: hsla(230, 25%, 100%, 0.7);
+}
+
+body.light-theme .convo-dropdown-menu .dropdown-item:hover,
+body.light-theme .message-dropdown-menu .dropdown-item:hover,
+body.light-theme .chat-options-dropdown .dropdown-item:hover {
+  background-color: hsla(230, 20%, 90%, 0.75);
+}
+
+body.light-theme .staged-files-container {
+  background-color: hsla(230, 20%, 90%, 0.5);
+}
+
+body.light-theme .staged-file-card {
+  background-color: hsla(230, 25%, 98%, 0.95);
+  border-color: var(--border-color);
+}
+
+body.light-theme .staged-file-delete {
+  background-color: hsla(230, 20%, 90%, 0.95);
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+}
+
+body.light-theme .staged-file-delete:hover {
+  background-color: var(--error);
+  color: white;
+  border-color: var(--error);
+}
+
+body.light-theme .chat-footer-btn {
+  background: hsla(230, 25%, 100%, 0.7) !important;
+}
+
+body.light-theme .chat-footer-btn:hover {
+  background: hsla(230, 25%, 100%, 0.95) !important;
+}
+
+body.light-theme .voice-preview-container {
+  background-color: hsla(230, 25%, 100%, 0.75);
+}
+
+body.light-theme .reply-preview-container {
+  background-color: hsla(230, 25%, 100%, 0.85);
+}
+
+body.light-theme .chat-modal-card {
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+}
+
+.message-click-status {
+  font-size: 0.72rem;
+  color: var(--accent-color);
+  margin-top: 4px;
+  opacity: 0.85;
+  transition: all 0.2s ease;
+  animation: fadeInStatus 0.15s ease-out;
+}
+
+@keyframes fadeInStatus {
+  from { opacity: 0; }
+  to { opacity: 0.85; }
 }

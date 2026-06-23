@@ -1,4 +1,4 @@
-import { socket } from '../../../js/core/websocket.js';
+import { socket } from '../../../../js/core/websocket.js';
 
 export const OfflineQueueHandler = {
   queueKey: 'chat_offline_queue',
@@ -17,14 +17,31 @@ export const OfflineQueueHandler = {
     this.isSyncing = true;
 
     while (queue.length > 0 && navigator.onLine) {
-      const item = queue[0];
       try {
-        socket.send(item.conversationId, item.message, item.type, null, item.replyMessageId);
+        const item = queue[0];
+        const clientMsgId = socket.send(item.conversationId, item.message, item.type.toUpperCase(), null, item.replyMessageId);
 
         if (String(item.conversationId) === String(ctx.conversationId)) {
           const msgIndex = ctx.messages.findIndex(m => m.id === item.tempId);
           if (msgIndex !== -1) {
             ctx.messages[msgIndex].status = 'sending';
+            ctx.messages[msgIndex].clientMsgId = clientMsgId;
+          }
+        }
+
+        // Cập nhật clientMsgId vào trong cache sessionStorage của cuộc hội thoại
+        const cacheKey = `chat_messages_cache_${item.conversationId}`;
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+          try {
+            const messages = JSON.parse(cached);
+            const cachedMsg = messages.find(m => String(m.id) === String(item.tempId));
+            if (cachedMsg) {
+              cachedMsg.clientMsgId = clientMsgId;
+              sessionStorage.setItem(cacheKey, JSON.stringify(messages));
+            }
+          } catch (e) {
+            console.warn('Failed to update cache in offline-queue-handler:', e);
           }
         }
 

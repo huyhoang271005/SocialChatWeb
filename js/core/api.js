@@ -1,4 +1,6 @@
 import { CONFIG } from './config.js';
+import { getLanguage } from './i18n.js';
+
 
 function handleApiResponse(responseJson) {
   if (responseJson && typeof responseJson === 'object') {
@@ -57,6 +59,7 @@ export async function refreshAccessToken() {
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
+        "Accept-Language": getLanguage()
       }
     });
 
@@ -185,6 +188,7 @@ async function request(endpoint, options = {}, alreadyRefreshed = false) {
   const url = `${CONFIG.API_BASE_URL}/${endpoint.replace(/^\//, '')}`;
   const headers = {
     "Accept": "*/*",
+    "Accept-Language": getLanguage(),
     ...options.headers
   };
 

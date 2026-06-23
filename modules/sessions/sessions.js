@@ -1,5 +1,6 @@
 import { api } from '../../js/core/api.js';
 import { showDialog } from '../../js/shared/dialog/dialog.js';
+import { t } from '../../js/core/i18n.js';
 
 export const SessionsView = {
   sessionsList: [],
@@ -19,14 +20,14 @@ export const SessionsView = {
               <line x1="8" y1="21" x2="16" y2="21"></line>
               <line x1="12" y1="17" x2="12" y2="21"></line>
             </svg>
-            <h2>Hoạt động & Phiên đăng nhập</h2>
+            <h2>${t('sessions_dashboard_title')}</h2>
           </div>
         </div>
 
         <div id="sessions-list-mount">
           <div class="sessions-loading-state">
             <div class="spinner"></div>
-            <p>Đang tải danh sách phiên đăng nhập...</p>
+            <p>${t('loading_sessions_list')}</p>
           </div>
         </div>
 
@@ -55,7 +56,7 @@ export const SessionsView = {
       listMount.innerHTML = `
         <div class="sessions-loading-state">
           <div class="spinner"></div>
-          <p>Đang tải danh sách phiên đăng nhập...</p>
+          <p>${t('loading_sessions_list')}</p>
         </div>
       `;
     }
@@ -93,11 +94,11 @@ export const SessionsView = {
           return 0;
         });
       } else {
-        throw new Error(response?.message || 'Không thể tải danh sách phiên đăng nhập.');
+        throw new Error(response?.message || t('load_sessions_failed'));
       }
     } catch (err) {
       console.error(err);
-      this.error = err.message || 'Lỗi kết nối máy chủ.';
+      this.error = err.message || t('server_connection_error');
     } finally {
       this.loading = false;
       this.renderList();
@@ -118,7 +119,7 @@ export const SessionsView = {
             <line x1="12" y1="16" x2="12.01" y2="16"></line>
           </svg>
           <p>${this.error}</p>
-          <button id="btn-retry-sessions" class="btn btn-primary" style="width: auto; margin-top: 15px;">Thử lại</button>
+          <button id="btn-retry-sessions" class="btn btn-primary" style="width: auto; margin-top: 15px;">${t('retry')}</button>
         </div>
       `;
       const retryBtn = document.getElementById('btn-retry-sessions');
@@ -137,7 +138,7 @@ export const SessionsView = {
             <line x1="8" y1="21" x2="16" y2="21"></line>
             <line x1="12" y1="17" x2="12" y2="21"></line>
           </svg>
-          <p>Không tìm thấy phiên làm việc nào.</p>
+          <p>${t('no_sessions_found')}</p>
         </div>
       `;
       if (paginationMount) paginationMount.innerHTML = '';
@@ -155,7 +156,7 @@ export const SessionsView = {
       if (this.hasMore) {
         paginationMount.innerHTML = `
           <button id="btn-load-more-sessions" class="btn btn-secondary">
-            ${this.loading ? '<div class="spinner-sm"></div> Đang tải...' : 'Xem thêm'}
+            ${this.loading ? '<div class="spinner-sm"></div> ' + t('loading') : t('see_more_sessions')}
           </button>
         `;
         const loadMoreBtn = document.getElementById('btn-load-more-sessions');
@@ -173,14 +174,14 @@ export const SessionsView = {
   renderSessionCard(session) {
     const isCurrent = session.mySession === true;
     const device = session.device || {};
-    const deviceName = device.deviceName || 'Thiết bị không xác định';
+    const deviceName = device.deviceName || t('unknown_device');
     const userAgent = device.userAgent || '';
     
     // Phân tích User Agent hiển thị OS & Trình duyệt
-    let osBrowserText = device.deviceType || 'Thiết bị';
+    let osBrowserText = device.deviceType || t('device_type_label');
     if (userAgent) {
       const parsed = this.parseUserAgent(userAgent);
-      osBrowserText = `${parsed.os} • ${parsed.browser}`;
+      osBrowserText = `${parsed.os} ${t('os_browser_divider')} ${parsed.browser}`;
     }
 
     // Lấy Icon phù hợp
@@ -189,12 +190,12 @@ export const SessionsView = {
     // Nhãn trạng thái (Badges)
     let badgesHtml = '';
     if (session.validated) {
-      badgesHtml += `<span class="session-badge badge-validated">Đã xác thực</span> `;
+      badgesHtml += `<span class="session-badge badge-validated">${t('status_verified')}</span> `;
     }
     if (session.revoked) {
-      badgesHtml += `<span class="session-badge badge-revoked">Đã thu hồi</span>`;
+      badgesHtml += `<span class="session-badge badge-revoked">${t('status_revoked')}</span>`;
     } else {
-      badgesHtml += `<span class="session-badge badge-active">Hoạt động</span>`;
+      badgesHtml += `<span class="session-badge badge-active">${t('status_active')}</span>`;
     }
 
     // Các nút hành động
@@ -202,7 +203,7 @@ export const SessionsView = {
     
     // Luôn thêm nút xem lịch sử xác thực bảo mật cho tất cả các phiên
     actionButtons.push(`
-      <button class="btn-action-verify-history" data-id="${session.sessionId}" title="Hiện lịch sử xác thực">
+      <button class="btn-action-verify-history" data-id="${session.sessionId}" title="${t('show_verification_history')}">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
         </svg>
@@ -212,7 +213,7 @@ export const SessionsView = {
     if (!isCurrent) {
       if (!session.revoked) {
         actionButtons.push(`
-          <button class="btn-action-logout" data-id="${session.sessionId}" title="Đăng xuất thiết bị">
+          <button class="btn-action-logout" data-id="${session.sessionId}" title="${t('logout_device')}">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
               <polyline points="16 17 21 12 16 7"></polyline>
@@ -223,7 +224,7 @@ export const SessionsView = {
       }
       
       actionButtons.push(`
-        <button class="btn-action-delete" data-id="${session.sessionId}" title="Xóa phiên đăng nhập">
+        <button class="btn-action-delete" data-id="${session.sessionId}" title="${t('delete_session')}">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="3 6 5 6 21 6"></polyline>
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -244,11 +245,11 @@ export const SessionsView = {
             <div class="device-details-text">
               <div class="device-title-row">
                 <span class="device-name">${deviceName}</span>
-                ${isCurrent ? '<span class="current-session-badge">Thiết bị hiện tại</span>' : ''}
+                ${isCurrent ? `<span class="current-session-badge">${t('current_device_badge')}</span>` : ''}
                 ${badgesHtml}
               </div>
               <div class="device-meta-row">
-                <div class="meta-item" title="Hệ điều hành & Trình duyệt">
+                <div class="meta-item" title="${t('os_browser')}">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
                     <line x1="8" y1="21" x2="16" y2="21"></line>
@@ -256,26 +257,26 @@ export const SessionsView = {
                   </svg>
                   <span>${osBrowserText}</span>
                 </div>
-                <div class="meta-item" title="Địa chỉ IP">
+                <div class="meta-item" title="${t('ip_address')}">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                     <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                   </svg>
-                  <span>${session.ipAddress || 'IP ẩn'}</span>
+                  <span>${session.ipAddress || t('hidden_ip')}</span>
                 </div>
-                ${session.location ? `
-                  <div class="meta-item" title="Vị trí">
+                ${session.device.location ? `
+                  <div class="meta-item" title="${t('location')}">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                       <circle cx="12" cy="10" r="3"></circle>
                     </svg>
-                    <span>${session.location}</span>
+                    <span>${session.device.location}</span>
                   </div>
                 ` : ''}
               </div>
               <div class="device-time-row">
-                <span>Đăng nhập lần đầu: ${this.formatDateTime(session.createdAt)}</span>
-                <span>Đăng nhập lần cuối: ${this.formatDateTime(session.lastLogin)}</span>
+                <span>${t('first_login')} ${this.formatDateTime(session.createdAt)}</span>
+                <span>${t('last_login')} ${this.formatDateTime(session.lastLogin)}</span>
               </div>
               ${isCurrent ? `
                 <div style="font-size: 0.78rem; color: var(--accent-color); margin-top: 6px; font-weight: 500; display: flex; align-items: center; gap: 4px;">
@@ -284,7 +285,7 @@ export const SessionsView = {
                     <line x1="12" y1="16" x2="12" y2="12"></line>
                     <line x1="12" y1="8" x2="12.01" y2="8"></line>
                   </svg>
-                  <span>Đây là phiên làm việc hiện tại của bạn. Không thể đăng xuất hoặc xóa phiên này.</span>
+                  <span>${t('current_session_info')}</span>
                 </div>
               ` : ''}
             </div>
@@ -332,12 +333,12 @@ export const SessionsView = {
 
   async handleRevoke(sessionId) {
     const confirm = await showDialog({
-      title: 'Đăng xuất thiết bị',
-      message: 'Bạn có chắc chắn muốn đăng xuất khỏi thiết bị này? Phiên làm việc sẽ bị vô hiệu hóa ngay lập tức.',
+      title: t('logout_device_title'),
+      message: t('logout_device_confirm_msg'),
       type: 'warning',
       buttons: [
-        { text: 'Hủy', type: 'secondary', value: false },
-        { text: 'Đăng xuất', type: 'danger', value: true }
+        { text: t('cancel'), type: 'secondary', value: false },
+        { text: t('logout'), type: 'danger', value: true }
       ]
     });
 
@@ -349,10 +350,10 @@ export const SessionsView = {
 
       if (response && response.success) {
         await showDialog({
-          title: 'Đăng xuất thành công',
-          message: 'Đã vô hiệu hóa phiên đăng nhập thành công.',
+          title: t('logout_success_title'),
+          message: t('logout_device_success_msg'),
           type: 'success',
-          buttons: [{ text: 'Đồng ý', type: 'primary', value: true }]
+          buttons: [{ text: t('ok'), type: 'primary', value: true }]
         });
 
         // Cập nhật trạng thái trực tiếp trên UI
@@ -362,13 +363,13 @@ export const SessionsView = {
           this.renderList();
         }
       } else {
-        throw new Error(response?.message || 'Không thể đăng xuất phiên làm việc.');
+        throw new Error(response?.message || t('logout_device_failed_msg'));
       }
     } catch (err) {
       console.error(err);
       await showDialog({
-        title: 'Lỗi hệ thống',
-        message: err.message || 'Không thể thu hồi phiên đăng nhập. Vui lòng thử lại sau.',
+        title: t('system_error_title'),
+        message: err.message || t('revoke_session_failed_msg'),
         type: 'error'
       });
     }
@@ -376,12 +377,12 @@ export const SessionsView = {
 
   async handleDelete(sessionId) {
     const confirm = await showDialog({
-      title: 'Xóa phiên đăng nhập',
-      message: 'Bạn có chắc chắn muốn xóa hẳn phiên đăng nhập này khỏi lịch sử hoạt động?',
+      title: t('delete_session_title'),
+      message: t('delete_session_confirm_msg'),
       type: 'warning',
       buttons: [
-        { text: 'Hủy', type: 'secondary', value: false },
-        { text: 'Xóa phiên', type: 'danger', value: true }
+        { text: t('cancel'), type: 'secondary', value: false },
+        { text: t('delete_session_btn'), type: 'danger', value: true }
       ]
     });
 
@@ -393,10 +394,10 @@ export const SessionsView = {
 
       if (response && response.success) {
         await showDialog({
-          title: 'Xóa thành công',
-          message: 'Đã xóa thông tin phiên đăng nhập khỏi lịch sử hoạt động.',
+          title: t('delete_success_title'),
+          message: t('delete_session_success_msg'),
           type: 'success',
-          buttons: [{ text: 'Đồng ý', type: 'primary', value: true }]
+          buttons: [{ text: t('ok'), type: 'primary', value: true }]
         });
 
         // Loại bỏ phần tử khỏi danh sách local
@@ -412,13 +413,13 @@ export const SessionsView = {
 
         this.renderList();
       } else {
-        throw new Error(response?.message || 'Không thể xóa phiên đăng nhập.');
+        throw new Error(response?.message || t('delete_session_failed_msg'));
       }
     } catch (err) {
       console.error(err);
       await showDialog({
-        title: 'Lỗi hệ thống',
-        message: err.message || 'Không thể xóa phiên đăng nhập. Vui lòng thử lại sau.',
+        title: t('system_error_title'),
+        message: err.message || t('delete_session_error_msg'),
         type: 'error'
       });
     }
@@ -459,8 +460,8 @@ export const SessionsView = {
   },
 
   parseUserAgent(ua) {
-    let os = 'Hệ điều hành ẩn';
-    let browser = 'Trình duyệt ẩn';
+    let os = t('hidden_os');
+    let browser = t('hidden_browser');
 
     if (/windows/i.test(ua)) os = 'Windows';
     else if (/macintosh|mac os x/i.test(ua)) os = 'macOS';
@@ -478,11 +479,12 @@ export const SessionsView = {
   },
 
   formatDateTime(instantStr) {
-    if (!instantStr) return 'Chưa ghi nhận';
+    if (!instantStr) return t('not_updated');
     try {
       const d = new Date(instantStr);
       if (isNaN(d.getTime())) return instantStr;
-      return d.toLocaleString('vi-VN', {
+      const lang = localStorage.getItem('chat_lang') || 'vi';
+      return d.toLocaleString(lang === 'vi' ? 'vi-VN' : 'en-US', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
@@ -504,10 +506,10 @@ export const SessionsView = {
     if (isVisible) {
       container.style.display = 'none';
       btn.classList.remove('active');
-      btn.title = 'Hiện lịch sử xác thực';
+      btn.title = t('show_verification_history');
     } else {
       btn.classList.add('active');
-      btn.title = 'Ẩn lịch sử xác thực';
+      btn.title = t('hide_verification_history');
       container.style.display = 'block';
 
       const session = this.sessionsList.find(s => s.sessionId === sessionId);
@@ -520,7 +522,7 @@ export const SessionsView = {
         container.innerHTML = `
           <div class="verifications-loading-state">
             <div class="spinner-sm"></div>
-            <p style="margin-top: 8px;">Đang tải lịch sử xác thực...</p>
+            <p style="margin-top: 8px;">${t('loading_verification_history')}</p>
           </div>
         `;
 
@@ -531,15 +533,15 @@ export const SessionsView = {
             session.verifications = Array.isArray(response.data) ? response.data : (response.data?.data || response.data || []);
             this.renderVerifications(session, container);
           } else {
-            throw new Error(response?.message || 'Không thể tải lịch sử xác thực từ máy chủ.');
+            throw new Error(response?.message || t('load_verification_history_server_error'));
           }
         } catch (err) {
           console.error(err);
           container.innerHTML = `
             <div class="verifications-error-state">
-              <span style="color: var(--error); font-weight: 500;">Không thể tải lịch sử xác thực</span>
-              <p>${err.message || 'Lỗi kết nối.'}</p>
-              <button class="btn btn-secondary btn-retry-verify" data-id="${sessionId}" style="padding: 6px 12px; font-size: 0.78rem; width: auto; margin-top: 10px;">Thử lại</button>
+              <span style="color: var(--error); font-weight: 500;">${t('load_verification_history_failed')}</span>
+              <p>${err.message || t('server_connection_error')}</p>
+              <button class="btn btn-secondary btn-retry-verify" data-id="${sessionId}" style="padding: 6px 12px; font-size: 0.78rem; width: auto; margin-top: 10px;">${t('retry')}</button>
             </div>
           `;
           const retryBtn = container.querySelector('.btn-retry-verify');
@@ -564,7 +566,7 @@ export const SessionsView = {
             <line x1="12" y1="8" x2="12.01" y2="8"></line>
             <line x1="12" y1="16" x2="12" y2="12"></line>
           </svg>
-          <p style="margin-top: 8px;">Không tìm thấy lịch sử xác thực nào cho phiên này.</p>
+          <p style="margin-top: 8px;">${t('no_verifications_found')}</p>
         </div>
       `;
       return;
@@ -576,7 +578,7 @@ export const SessionsView = {
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
           </svg>
-          Lịch sử xác thực bảo mật (${list.length})
+          ${t('security_verification_history')} (${list.length})
         </h4>
       </div>
       <div class="verifications-list">
@@ -595,8 +597,8 @@ export const SessionsView = {
                 <div class="verification-details">
                   <span class="verification-type">${typeLabel}</span>
                   <span class="verification-time">
-                    Khởi tạo: ${this.formatDateTime(v.createdAt)}
-                    ${v.usedAt ? ` • Xác minh: ${this.formatDateTime(v.usedAt)}` : ' • Chưa sử dụng'}
+                    ${t('created_at')} ${this.formatDateTime(v.createdAt)}
+                    ${v.usedAt ? ` ${t('os_browser_divider')} ${t('verified_at')} ${this.formatDateTime(v.usedAt)}` : ` ${t('os_browser_divider')} ${t('unused')}`}
                   </span>
                 </div>
               </div>
@@ -609,13 +611,13 @@ export const SessionsView = {
   },
 
   formatVerificationType(type) {
-    if (!type) return 'Phương thức xác thực';
+    if (!type) return t('verify_type').replace(' {type}', '').replace('{type}', '');
     const mapping = {
-      VERIFICATION_EMAIL: 'Xác thực Email',
-      VERIFICATION_DEVICE: 'Xác minh Thiết bị mới',
-      VERIFICATION_RESET_PASSWORD: 'Đặt lại Mật khẩu'
+      VERIFICATION_EMAIL: t('verify_email'),
+      VERIFICATION_DEVICE: t('verify_new_device'),
+      VERIFICATION_RESET_PASSWORD: t('verify_reset_password')
     };
-    return mapping[String(type).toUpperCase()] || `Xác thực ${type}`;
+    return mapping[String(type).toUpperCase()] || t('verify_type').replace('{type}', type);
   },
 
   getVerificationTypeIcon(type) {
@@ -647,12 +649,12 @@ export const SessionsView = {
   },
 
   formatVerificationStatus(status) {
-    if (!status) return 'Chờ xử lý';
+    if (!status) return t('status_pending');
     const mapping = {
-      PENDING: 'Chờ xác thực',
-      USED: 'Đã sử dụng',
-      EXPIRED: 'Đã hết hạn',
-      CANCELLED: 'Đã hủy bỏ'
+      PENDING: t('status_waiting_verification'),
+      USED: t('status_used'),
+      EXPIRED: t('status_expired'),
+      CANCELLED: t('status_cancelled')
     };
     return mapping[String(status).toUpperCase()] || status;
   }

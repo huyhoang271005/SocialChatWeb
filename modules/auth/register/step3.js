@@ -1,5 +1,6 @@
 import { api } from '../../../js/core/api.js';
 import { showDialog } from '../../../js/shared/dialog/dialog.js';
+import { t } from '../../../js/core/i18n.js';
 
 export const Step3 = {
   render() {
@@ -21,7 +22,7 @@ export const Step3 = {
                 <circle cx="12" cy="13" r="4"/>
               </svg>
             </div>
-            <span class="avatar-picker-btn">Chọn ảnh đại diện</span>
+            <span class="avatar-picker-btn">${t('choose_avatar')}</span>
             <input 
               type="file" 
               id="reg-avatar-input" 
@@ -32,38 +33,38 @@ export const Step3 = {
 
           <!-- Nickname / Biệt danh -->
           <div class="form-group">
-            <label class="form-label" for="reg-username">Biệt danh (Username)</label>
+            <label class="form-label" for="reg-username">${t('username_label')}</label>
             <input 
               type="text" 
               id="reg-username" 
               class="form-input" 
-              placeholder="Ví dụ: linhchi_99" 
+              placeholder="${t('nickname_placeholder')}" 
               required
             >
           </div>
 
           <!-- Gender selection -->
           <div class="form-group">
-            <label class="form-label">Giới tính</label>
+            <label class="form-label">${t('gender_label')}</label>
             <div class="gender-selector">
               <div class="gender-option">
                 <input type="radio" name="reg-gender" id="gender-male" value="MALE" checked>
-                <label for="gender-male" class="gender-label">Nam</label>
+                <label for="gender-male" class="gender-label">${t('gender_male')}</label>
               </div>
               <div class="gender-option">
                 <input type="radio" name="reg-gender" id="gender-female" value="FEMALE">
-                <label for="gender-female" class="gender-label">Nữ</label>
+                <label for="gender-female" class="gender-label">${t('gender_female')}</label>
               </div>
               <div class="gender-option">
                 <input type="radio" name="reg-gender" id="gender-other" value="OTHER">
-                <label for="gender-other" class="gender-label">Khác</label>
+                <label for="gender-other" class="gender-label">${t('gender_other')}</label>
               </div>
             </div>
           </div>
 
           <!-- Birthday -->
           <div class="form-group">
-            <label class="form-label" for="reg-birthday">Ngày sinh</label>
+            <label class="form-label" for="reg-birthday">${t('dob_label')}</label>
             <input 
               type="date" 
               id="reg-birthday" 
@@ -74,7 +75,7 @@ export const Step3 = {
 
           <div style="margin-top: 25px;">
             <button type="submit" class="btn btn-primary">
-              Hoàn tất
+              ${t('complete')}
             </button>
           </div>
         </form>
@@ -117,21 +118,21 @@ export const Step3 = {
       const birthday = document.getElementById('reg-birthday').value;
       const gender = document.querySelector('input[name="reg-gender"]:checked').value;
 
-      toggleLoading(true, 'Đang chuẩn bị tải ảnh...');
+      toggleLoading(true, t('preparing_upload_image'));
 
       let publicUrl = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150';
       let publicId = 'default_avatar';
 
       // 1. Image upload flow if user selected a file
       if (state.avatarFile) {
-        toggleLoading(true, 'Đang tải ảnh đại diện lên máy chủ...');
+        toggleLoading(true, t('uploading_avatar'));
         
         // Perform final upload using signature config metadata
         const uploadResponse = await api.uploadImage(state.avatarFile, 'avatars');
         if (!uploadResponse.success) {
           toggleLoading(false);
           await showDialog({
-            title: 'Lỗi tải ảnh đại diện',
+            title: t('upload_avatar_failed'),
             message: uploadResponse.message,
             type: 'error'
           });
@@ -142,7 +143,7 @@ export const Step3 = {
       }
 
       // 2. Put profile details
-      toggleLoading(true, 'Đang lưu hồ sơ cá nhân của bạn...');
+      toggleLoading(true, t('saving_profile'));
 
       const profileResponse = await api.put('profiles', {
         username,
@@ -155,7 +156,7 @@ export const Step3 = {
 
       if (!profileResponse.success) {
         await showDialog({
-          title: 'Lỗi cập nhật hồ sơ',
+          title: t('profile_update_failed'),
           message: Array.isArray(profileResponse.data) ? profileResponse.data.join(", ") : profileResponse.message,
           type: 'error'
         });
@@ -172,10 +173,10 @@ export const Step3 = {
       sessionStorage.removeItem('register_user_id');
 
       await showDialog({
-        title: 'Đăng ký thành công',
-        message: 'Hồ sơ của bạn đã được khởi tạo hoàn tất. Bắt đầu kết nối ngay thôi!',
+        title: t('register_success'),
+        message: t('register_completed_msg'),
         type: 'success',
-        buttons: [{ text: 'Mở ứng dụng', type: 'primary', value: true }]
+        buttons: [{ text: t('open_app'), type: 'primary', value: true }]
       });
 
       // Clear view state cache & redirect

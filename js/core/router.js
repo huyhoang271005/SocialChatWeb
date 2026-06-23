@@ -1,3 +1,5 @@
+import { t, setLanguage, getLanguage } from './i18n.js';
+
 /**
  * Dynamic Stylesheet Loader Utility
  */
@@ -58,6 +60,23 @@ class Router {
     this.visualViewportResizeListener = null;
     this.visualViewportScrollListener = null;
     this.windowScrollListener = null;
+
+    // Initialize theme early
+    const theme = this.getCurrentTheme();
+    if (theme === 'light') {
+      document.body.classList.add('light-theme');
+    } else {
+      document.body.classList.remove('light-theme');
+    }
+  }
+
+  getCurrentTheme() {
+    const savedTheme = localStorage.getItem('chat_theme');
+    if (savedTheme) return savedTheme;
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+      return 'light';
+    }
+    return 'dark';
   }
 
   navigate(route) {
@@ -218,64 +237,87 @@ class Router {
                 </div>
                 
                 <nav class="nav-menu">
-                  <a href="#home" class="nav-item" id="nav-item-home" title="Trò chuyện">
+                  <a href="#home" class="nav-item" id="nav-item-home" title="${t('chat')}">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                     </svg>
+                    <span class="nav-label">${t('chat')}</span>
                   </a>
                   
-                  <a href="#profile" class="nav-item" id="nav-item-profile" title="Trang cá nhân">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                      <circle cx="12" cy="7" r="4"></circle>
-                    </svg>
-                  </a>
-                  
-                  <a href="#roles" class="nav-item" id="nav-item-roles" title="Quản lý Vai trò">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                    </svg>
-                  </a>
-                  
-                  <a href="#users" class="nav-item" id="nav-item-users" title="Quản lý Người dùng">
+                  <a href="#users" class="nav-item" id="nav-item-users" title="${t('members')}">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                       <circle cx="9" cy="7" r="4"></circle>
                       <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
                       <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                     </svg>
+                    <span class="nav-label">${t('members')}</span>
                   </a>
                   
-                  <a href="#sessions" class="nav-item" id="nav-item-sessions" title="Phiên đăng nhập">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                      <line x1="8" y1="21" x2="16" y2="21"></line>
-                      <line x1="12" y1="17" x2="12" y2="21"></line>
-                    </svg>
-                  </a>
-                </nav>
-                
-                <div class="nav-footer">
-                  <button id="nav-btn-notifications" class="nav-notification-btn" title="Đang tải...">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-bell-icon disabled">
-                      <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                      <path d="M18.63 13A17.89 17.89 0 0 1 18 8"></path>
-                      <path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"></path>
-                      <path d="M18 8a6 6 0 0 0-9.33-5"></path>
-                      <line x1="1" y1="1" x2="23" y2="23"></line>
-                    </svg>
-                  </button>
+                  <div class="nav-extra-group" id="nav-extra-group">
+                    <a href="#roles" class="nav-item" id="nav-item-roles" title="${t('roles')}">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                      </svg>
+                      <span class="nav-label">${t('roles')}</span>
+                    </a>
+                    
+                    <a href="#sessions" class="nav-item" id="nav-item-sessions" title="${t('sessions')}">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                        <line x1="8" y1="21" x2="16" y2="21"></line>
+                        <line x1="12" y1="17" x2="12" y2="21"></line>
+                      </svg>
+                      <span class="nav-label">${t('sessions')}</span>
+                    </a>
 
-                  <button id="nav-btn-logout" class="nav-logout-btn" title="Đăng xuất">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                      <polyline points="16 17 21 12 16 7"></polyline>
-                      <line x1="21" y1="12" x2="9" y2="12"></line>
+                    <button id="nav-btn-theme" class="nav-theme-btn nav-item" title="${t('theme')}">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-theme-icon">
+                        <circle cx="12" cy="12" r="5"></circle>
+                      </svg>
+                      <span class="nav-label">${t('theme')}</span>
+                    </button>
+
+                    <button id="nav-btn-lang" class="nav-lang-btn nav-item" title="${t('change_language')}">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-lang-icon">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="2" y1="12" x2="22" y2="12"></line>
+                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                      </svg>
+                      <span class="nav-label">${t('language')}</span>
+                    </button>
+
+                    <button id="nav-btn-notifications" class="nav-notification-btn nav-item" title="${t('notifications')}">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-bell-icon disabled">
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                        <path d="M18.63 13A17.89 17.89 0 0 1 18 8"></path>
+                        <path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"></path>
+                        <path d="M18 8a6 6 0 0 0-9.33-5"></path>
+                        <line x1="1" y1="1" x2="23" y2="23"></line>
+                      </svg>
+                      <span class="nav-label">${t('notifications')}</span>
+                    </button>
+
+                    <button id="nav-btn-logout" class="nav-logout-btn nav-item" title="${t('logout')}">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                      </svg>
+                      <span class="nav-label">${t('logout')}</span>
+                    </button>
+                  </div>
+
+                  <button id="nav-btn-more" class="nav-item nav-more-btn" title="${t('language')} / ${t('logout')}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="1.5"></circle>
+                      <circle cx="19" cy="12" r="1.5"></circle>
+                      <circle cx="5" cy="12" r="1.5"></circle>
                     </svg>
+                    <span class="nav-label">${t('language')}</span>
                   </button>
-                </div>
+                </nav>
               </aside>
-              
               <main class="main-content-panel" id="main-content-mount"></main>
             </div>
           `;
@@ -304,17 +346,74 @@ class Router {
   }
 
   async bindSidebarEvents() {
+    // Theme toggle binding
+    const themeBtn = document.getElementById('nav-btn-theme');
+    if (themeBtn) {
+      const updateThemeUI = () => {
+        const currentTheme = this.getCurrentTheme();
+        if (currentTheme === 'light') {
+          themeBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-theme-icon">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+            <span class="nav-label">${t('theme')}</span>
+          `;
+          themeBtn.title = currentTheme === 'light' ? (getLanguage() === 'vi' ? 'Chuyển sang chế độ tối' : 'Switch to dark mode') : (getLanguage() === 'vi' ? 'Chuyển sang chế độ sáng' : 'Switch to light mode');
+        } else {
+          themeBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-theme-icon">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.22" x2="5.64" y2="17.78"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+            <span class="nav-label">${t('theme')}</span>
+          `;
+          themeBtn.title = currentTheme === 'light' ? (getLanguage() === 'vi' ? 'Chuyển sang chế độ tối' : 'Switch to dark mode') : (getLanguage() === 'vi' ? 'Chuyển sang chế độ sáng' : 'Switch to light mode');
+        }
+      };
+
+      updateThemeUI();
+
+      themeBtn.addEventListener('click', () => {
+        const currentTheme = this.getCurrentTheme();
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        localStorage.setItem('chat_theme', newTheme);
+        if (newTheme === 'light') {
+          document.body.classList.add('light-theme');
+        } else {
+          document.body.classList.remove('light-theme');
+        }
+        updateThemeUI();
+      });
+    }
+
+    // Language toggle binding
+    const langBtn = document.getElementById('nav-btn-lang');
+    if (langBtn) {
+      langBtn.addEventListener('click', () => {
+        const currentLang = getLanguage();
+        const newLang = currentLang === 'vi' ? 'en' : 'vi';
+        setLanguage(newLang);
+      });
+    }
+
     const logoutBtn = document.getElementById('nav-btn-logout');
     if (logoutBtn) {
       logoutBtn.addEventListener('click', async () => {
         const { showDialog } = await import('../shared/dialog/dialog.js');
         const confirm = await showDialog({
-          title: 'Đăng xuất',
-          message: 'Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?',
+          title: t('confirm_logout_title'),
+          message: t('confirm_logout_message'),
           type: 'warning',
           buttons: [
-            { text: 'Hủy', type: 'secondary', value: false },
-            { text: 'Đăng xuất', type: 'danger', value: true }
+            { text: t('logout_cancel'), type: 'secondary', value: false },
+            { text: t('logout_confirm'), type: 'danger', value: true }
           ]
         });
 
@@ -344,8 +443,9 @@ class Router {
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
                 <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
               </svg>
+              <span class="nav-label">${t('notifications')}</span>
             `;
-            notificationBtn.title = 'Tắt thông báo ứng dụng';
+            notificationBtn.title = t('disable_notifications_btn');
           } else {
             notificationBtn.innerHTML = `
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nav-bell-icon disabled">
@@ -355,8 +455,9 @@ class Router {
                 <path d="M18 8a6 6 0 0 0-9.33-5"></path>
                 <line x1="1" y1="1" x2="23" y2="23"></line>
               </svg>
+              <span class="nav-label">${t('notifications')}</span>
             `;
-            notificationBtn.title = 'Bật thông báo ứng dụng';
+            notificationBtn.title = t('enable_notifications_btn');
           }
         };
 
@@ -377,16 +478,26 @@ class Router {
         notificationBtn.addEventListener('click', async () => {
           const bellIcon = notificationBtn.querySelector('.nav-bell-icon');
           const isEnabled = bellIcon && bellIcon.classList.contains('enabled');
-          const actionText = isEnabled ? 'tắt' : 'bật';
+          const actionText = isEnabled 
+            ? (getLanguage() === 'vi' ? 'tắt' : 'disable') 
+            : (getLanguage() === 'vi' ? 'bật' : 'enable');
 
           const { showDialog } = await import('../shared/dialog/dialog.js');
           const confirm = await showDialog({
-            title: isEnabled ? 'Tắt thông báo' : 'Bật thông báo',
-            message: `Bạn có chắc chắn muốn ${actionText} thông báo ứng dụng?`,
+            title: isEnabled ? t('confirm_disable_notifications_title') : t('confirm_enable_notifications_title'),
+            message: getLanguage() === 'vi' 
+              ? `Bạn có chắc chắn muốn ${actionText} thông báo ứng dụng?` 
+              : `Are you sure you want to ${actionText} app notifications?`,
             type: 'info',
             buttons: [
-              { text: 'Hủy', type: 'secondary', value: false },
-              { text: isEnabled ? 'Tắt' : 'Bật', type: isEnabled ? 'danger' : 'primary', value: true }
+              { text: t('logout_cancel'), type: 'secondary', value: false },
+              { 
+                text: isEnabled 
+                  ? (getLanguage() === 'vi' ? 'Tắt' : 'Disable') 
+                  : (getLanguage() === 'vi' ? 'Bật' : 'Enable'), 
+                type: isEnabled ? 'danger' : 'primary', 
+                value: true 
+              }
             ]
           });
 
@@ -426,14 +537,14 @@ class Router {
             if (res && res.success) {
               updateUI(!isEnabled);
               await showDialog({
-                title: 'Thành công',
-                message: `Đã ${isEnabled ? 'tắt' : 'bật'} thông báo ứng dụng thành công!`,
+                title: t('success_title'),
+                message: isEnabled ? t('notification_success_disable') : t('notification_success_enable'),
                 type: 'success'
               });
             } else {
-              const errMsg = res?.message || 'Không thể thay đổi trạng thái thông báo.';
+              const errMsg = res?.message || t('notification_error');
               await showDialog({
-                title: 'Lỗi',
+                title: t('error_title'),
                 message: errMsg,
                 type: 'error'
               });
@@ -441,8 +552,8 @@ class Router {
           } catch (err) {
             console.error('Error changing notification status:', err);
             await showDialog({
-              title: 'Lỗi kết nối',
-              message: 'Đã xảy ra lỗi hệ thống khi kết nối đến máy chủ.',
+              title: t('error_title'),
+              message: t('notification_connection_error'),
               type: 'error'
             });
           }
@@ -450,6 +561,26 @@ class Router {
       } catch (err) {
         console.error('Failed to initialize notification button logic:', err);
       }
+    }
+
+    // Toggle logic for the Mobile More menu
+    const moreBtn = document.getElementById('nav-btn-more');
+    const extraGroup = document.getElementById('nav-extra-group');
+    if (moreBtn && extraGroup) {
+      moreBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        extraGroup.classList.toggle('active');
+      });
+      document.addEventListener('click', (e) => {
+        if (!extraGroup.contains(e.target) && e.target !== moreBtn) {
+          extraGroup.classList.remove('active');
+        }
+      });
+      extraGroup.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+          extraGroup.classList.remove('active');
+        });
+      });
     }
   }
 

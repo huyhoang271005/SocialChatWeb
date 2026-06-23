@@ -1,5 +1,5 @@
-import { api } from '../../../js/core/api.js';
-import { socket } from '../../../js/core/websocket.js';
+import { api } from '../../../../js/core/api.js';
+import { socket } from '../../../../js/core/websocket.js';
 import { VoiceRecorder } from './voice-recorder.js';
 import { AttachmentHandler } from './attachment-handler.js';
 
@@ -20,6 +20,11 @@ export const ConversationHandler = {
       if (cached) {
         try {
           ctx.conversations = JSON.parse(cached);
+          ctx.conversations.forEach(c => {
+            if (c.unreadMessage !== undefined && c.unreadMessage !== null) {
+              c.unreadMessage = parseInt(c.unreadMessage || 0, 10);
+            }
+          });
           ctx.renderConversationsList();
           ctx.conversationsLoading = false;
 
@@ -91,6 +96,11 @@ export const ConversationHandler = {
         ctx.conversationsPage = 0;
         ctx.conversations = listData;
       }
+      ctx.conversations.forEach(c => {
+        if (c.unreadMessage !== undefined && c.unreadMessage !== null) {
+          c.unreadMessage = parseInt(c.unreadMessage || 0, 10);
+        }
+      });
     } catch (err) {
       console.error('Failed to load conversations:', err);
       if (!nextPage) ctx.conversations = [];
@@ -206,41 +216,47 @@ export const ConversationHandler = {
 
     let hasUnread = false;
     if (convo) {
-      if (convo.unreadMessage && convo.unreadMessage > 0) {
+      const currentUserId = localStorage.getItem('chat_user_id');
+      const myUserConvo = convo.userConversations?.find(u => String(u.userId) === String(currentUserId));
+      const unreadCount = myUserConvo && myUserConvo.unreadMessage !== undefined && myUserConvo.unreadMessage !== null
+        ? parseInt(myUserConvo.unreadMessage || 0, 10)
+        : parseInt(convo.unreadMessage || 0, 10);
+
+      if (unreadCount > 0) {
         hasUnread = true;
         convo.unreadMessage = 0;
+        if (myUserConvo) {
+          myUserConvo.unreadMessage = 0;
+        }
         ctx.renderConversationsList();
       }
 
       const defaultUserAvatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&h=100';
       const defaultGroupAvatar = 'https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?auto=format&fit=crop&w=100&h=100';
 
-      let avatarUrl = convo.conversationAvatarUrl;
-      if (!avatarUrl) {
-        avatarUrl = convo.group ? defaultGroupAvatar : defaultUserAvatar;
-      }
-
       let displayTitle = convo.title;
-      if (!displayTitle) {
-        if (!convo.group) {
-          const currentUserId = localStorage.getItem('chat_user_id');
-          const otherParticipant = convo.userConversations?.find(u => String(u.userId) !== String(currentUserId));
-          if (otherParticipant) {
-            displayTitle = otherParticipant.fullName ||
-                           otherParticipant.user?.fullName ||
-                           otherParticipant.displayName ||
-                           otherParticipant.username ||
-                           otherParticipant.user?.username ||
-                           'Người dùng';
-            if (otherParticipant.avatarUrl || otherParticipant.user?.avatarUrl) {
-              avatarUrl = otherParticipant.avatarUrl || otherParticipant.user.avatarUrl;
-            }
-          } else {
-            displayTitle = 'Trò chuyện #' + conversationId;
-          }
+      let avatarUrl = convo.conversationAvatarUrl;
+
+      if (!convo.group) {
+        // 1-on-1 chat: Set title = other person's fullName, avatar = other person's avatarUrl
+        const otherParticipant = convo.userConversations?.find(u => String(u.userId) !== String(currentUserId));
+        if (otherParticipant) {
+          displayTitle = otherParticipant.fullName ||
+                         otherParticipant.user?.fullName ||
+                         otherParticipant.displayName ||
+                         otherParticipant.username ||
+                         otherParticipant.user?.username ||
+                         displayTitle ||
+                         'Người dùng';
+          avatarUrl = otherParticipant.avatarUrl || otherParticipant.user?.avatarUrl || defaultUserAvatar;
         } else {
-          displayTitle = 'Nhóm trò chuyện #' + convo.conversationId;
+          displayTitle = displayTitle || 'Trò chuyện #' + conversationId;
+          avatarUrl = avatarUrl || defaultUserAvatar;
         }
+      } else {
+        // Group chat
+        displayTitle = displayTitle || 'Nhóm trò chuyện #' + convo.conversationId;
+        avatarUrl = avatarUrl || defaultGroupAvatar;
       }
 
       ctx.updateChatHeader(displayTitle || ('Cuộc trò chuyện ' + conversationId), avatarUrl, convo.group ? 'Nhóm trò chuyện' : 'Đang hoạt động', conversationId, ctx.conversations);
@@ -327,7 +343,7 @@ export const ConversationHandler = {
       }
     } catch (err) {
       console.warn('Mute conversation API failed:', err);
-      const { showDialog } = await import('../../../js/shared/dialog/dialog.js');
+      const { showDialog } = await import('../../../../js/shared/dialog/dialog.js');
       await showDialog({
         title: 'Lỗi thực hiện',
         message: err.message || 'Không thể thay đổi trạng thái tắt tiếng cuộc trò chuyện. Vui lòng thử lại.',
@@ -337,7 +353,7 @@ export const ConversationHandler = {
   },
 
   async deleteConversation(ctx, conversationId) {
-    const { showDialog } = await import('../../../js/shared/dialog/dialog.js');
+    const { showDialog } = await import('../../../../js/shared/dialog/dialog.js');
     const confirm = await showDialog({
       title: 'Xóa cuộc trò chuyện',
       message: 'Bạn có chắc chắn muốn xóa cuộc trò chuyện này không? Hành động này không thể hoàn tác.',

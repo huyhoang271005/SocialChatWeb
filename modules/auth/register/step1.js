@@ -1,5 +1,6 @@
 import { api } from '../../../js/core/api.js';
 import { showDialog } from '../../../js/shared/dialog/dialog.js';
+import { t } from '../../../js/core/i18n.js';
 
 export const Step1 = {
   render() {
@@ -7,7 +8,7 @@ export const Step1 = {
       <div class="step-card active" id="step-card-1">
         <form id="form-step-1">
           <div class="form-group">
-            <label class="form-label" for="reg-email">Địa chỉ Email</label>
+            <label class="form-label" for="reg-email">${t('email_address_label')}</label>
             <input 
               type="email" 
               id="reg-email" 
@@ -17,32 +18,32 @@ export const Step1 = {
             >
           </div>
           <div class="form-group">
-            <label class="form-label" for="reg-password">Mật khẩu</label>
+            <label class="form-label" for="reg-password">${t('password_label')}</label>
             <input 
               type="password" 
               id="reg-password" 
               class="form-input" 
-              placeholder="Tối thiểu 8 ký tự" 
+              placeholder="${t('password_placeholder')}" 
               required
             >
           </div>
           <div class="form-group">
-            <label class="form-label" for="reg-confirm-password">Xác nhận mật khẩu</label>
+            <label class="form-label" for="reg-confirm-password">${t('confirm_password_label')}</label>
             <input 
               type="password" 
               id="reg-confirm-password" 
               class="form-input" 
-              placeholder="Nhập lại mật khẩu" 
+              placeholder="${t('confirm_password_placeholder')}" 
               required
             >
           </div>
           <button type="submit" class="btn btn-primary" style="margin-top: 15px;">
-            Tiếp tục
+            ${t('continue')}
           </button>
         </form>
         <div class="auth-links" style="justify-content: center; margin-top: 20px;">
-          <span style="color: var(--text-secondary); margin-right: 5px;">Đã có tài khoản?</span>
-          <a href="#login" class="auth-link">Đăng nhập</a>
+          <span style="color: var(--text-secondary); margin-right: 5px;">${t('already_have_account')}</span>
+          <a href="#login" class="auth-link">${t('login_title')}</a>
         </div>
       </div>
     `;
@@ -60,21 +61,21 @@ export const Step1 = {
 
       if (password !== confirmPassword) {
         await showDialog({
-          title: 'Mật khẩu không khớp',
-          message: 'Mật khẩu xác nhận phải trùng khớp với mật khẩu đã nhập.',
+          title: t('password_mismatch_title'),
+          message: t('password_mismatch_msg'),
           type: 'warning'
         });
         return;
       }
 
-      toggleLoading(true, 'Đang xác thực thông tin tài khoản...');
+      toggleLoading(true, t('verifying_account_info'));
 
       const response = await api.post('users/auth', { emailName: email, password });
 
       if (!response.success) {
         toggleLoading(false);
         await showDialog({
-          title: 'Đăng ký tài khoản thất bại',
+          title: t('register_failed'),
           message: Array.isArray(response.data) ? response.data.join(', ') : response.message,
           type: 'error'
         });
@@ -85,14 +86,14 @@ export const Step1 = {
       state.userId = response.data?.userId;
 
       // Gửi email xác thực trước khi sang bước tiếp theo
-      toggleLoading(true, 'Đang gửi email xác thực...');
+      toggleLoading(true, t('sending_verification_email'));
       try {
         const verifyRes = await api.post('verifications/send-verification-email', { emailName: email });
         toggleLoading(false);
 
         await showDialog({
-          title: verifyRes.success ? 'Gửi email thành công' : 'Gửi email thất bại',
-          message: verifyRes.message || 'Mã xác thực đã được gửi đến email của bạn.',
+          title: verifyRes.success ? t('send_email_success') : t('send_email_failed'),
+          message: verifyRes.message || t('verification_email_sent'),
           type: verifyRes.success ? 'success' : 'error'
         });
 
@@ -102,8 +103,8 @@ export const Step1 = {
       } catch (err) {
         toggleLoading(false);
         await showDialog({
-          title: 'Lỗi kết nối',
-          message: err.message || 'Không thể kết nối đến máy chủ để gửi email xác thực.',
+          title: t('connection_error'),
+          message: err.message || t('connection_error_msg'),
           type: 'error'
         });
       }

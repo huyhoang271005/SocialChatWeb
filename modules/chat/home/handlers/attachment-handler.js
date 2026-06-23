@@ -1,4 +1,4 @@
-import { api } from '../../../js/core/api.js';
+import { api } from '../../../../js/core/api.js';
 
 export const AttachmentHandler = {
   stageFiles(files, type, stagedFiles) {

@@ -1,4 +1,5 @@
-import { api } from '../../../js/core/api.js';
+import { api } from '../../../../js/core/api.js';
+import { t, formatSystemMessage } from '../../../../js/core/i18n.js';
 
 export const MessageLoader = {
   async loadMessages(ctx, conversationId, nextPage = false, forceRefresh = false) {
@@ -64,11 +65,20 @@ export const MessageLoader = {
         const mappedMessages = messagesList.map(msg => {
           const senderId = msg.senderId !== undefined && msg.senderId !== null ? msg.senderId : msg.sender?.userId;
           const isRevoked = msg.revoked === true;
+          const msgType = String(msg.type || 'TEXT').toUpperCase();
+          let textVal = msg.text || msg.message || '';
+          let rawTextVal = textVal;
+
+          const isSystemMsg = msgType === 'REMOVE_MEMBER' || msgType === 'ADD_MEMBER' || msgType === 'LEAVED';
+          if (isSystemMsg) {
+            textVal = formatSystemMessage(msgType, textVal);
+          }
+
           return {
             id: msg.messageId || msg.id,
             sender: String(senderId) === String(currentUserId) ? 'me' : 'them',
             senderId: senderId,
-            text: isRevoked ? 'Tin nhắn đã bị thu hồi' : (msg.text || msg.message || ''),
+            text: isRevoked ? t('revoked_msg') : textVal,
             type: msg.type || 'TEXT',
             time: (() => {
               if (!msg.createdAt) return new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
@@ -82,7 +92,8 @@ export const MessageLoader = {
             replyMessageId: msg.replyMessageId || null,
             replyText: msg.replyText || null,
             replyType: msg.replyType || null,
-            replyRevoked: msg.replyRevoked === true
+            replyRevoked: msg.replyRevoked === true,
+            rawText: isSystemMsg ? rawTextVal : undefined
           };
         });
 

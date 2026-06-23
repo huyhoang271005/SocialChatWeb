@@ -1,5 +1,6 @@
 import { api } from '../../js/core/api.js';
 import { showDialog } from '../../js/shared/dialog/dialog.js';
+import { t } from '../../js/core/i18n.js';
 
 export const RolesView = {
   roles: [],
@@ -14,43 +15,43 @@ export const RolesView = {
             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-color)">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
             </svg>
-            <h2>Quản lý Roles & Permissions</h2>
+            <h2>${t('roles_title')}</h2>
           </div>
         </div>
 
         <div class="roles-layout">
           <!-- Left Section: Roles List -->
           <div class="roles-section">
-            <h3 class="form-title">Danh sách Vai trò</h3>
+            <h3 class="form-title">${t('roles_list_title')}</h3>
             <div id="roles-list" class="roles-list-container">
               <div class="no-roles-fallback">
                 <div class="spinner" style="margin: 0 auto 12px;"></div>
-                Đang tải danh sách vai trò...
+                ${t('loading_roles_list')}
               </div>
             </div>
           </div>
 
           <!-- Right Section: Add/Edit Form -->
           <div class="roles-section">
-            <h3 id="form-header-title" class="form-title">Thêm Vai trò mới</h3>
+            <h3 id="form-header-title" class="form-title">${t('add_role_title')}</h3>
             <form id="role-form">
               <div class="form-group">
-                <label class="form-label" for="input-role-name">Tên vai trò (Role Name)</label>
-                <input type="text" id="input-role-name" class="form-input" placeholder="Ví dụ: ADMIN, MANAGER, USER..." required>
+                <label class="form-label" for="input-role-name">${t('role_name_label')}</label>
+                <input type="text" id="input-role-name" class="form-input" placeholder="${t('role_name_placeholder')}" required>
               </div>
 
               <div class="form-group">
-                <label class="form-label">Gán quyền hạn (Permissions)</label>
+                <label class="form-label">${t('assign_permissions_label')}</label>
                 <div id="permissions-grid" class="permissions-select-grid">
                   <div style="grid-column: 1/-1; text-align: center; padding: 20px; color: var(--text-muted);">
-                    Đang tải quyền hạn...
+                    ${t('loading_permissions')}
                   </div>
                 </div>
               </div>
 
               <div style="display: flex; gap: 12px; margin-top: 25px;">
-                <button type="submit" id="btn-submit-form" class="btn btn-primary" style="flex: 1;">Xác nhận</button>
-                <button type="button" id="btn-cancel-edit" class="btn btn-secondary" style="flex: 1; display: none;">Hủy</button>
+                <button type="submit" id="btn-submit-form" class="btn btn-primary" style="flex: 1;">${t('submit')}</button>
+                <button type="button" id="btn-cancel-edit" class="btn btn-secondary" style="flex: 1; display: none;">${t('cancel_btn')}</button>
               </div>
             </form>
           </div>
@@ -103,11 +104,11 @@ export const RolesView = {
       if (permResponse && permResponse.success && Array.isArray(permResponse.data)) {
         this.permissions = permResponse.data;
       } else {
-        console.warn('[Roles] Không tải được permissions từ API, sử dụng cấu hình mặc định.');
+        console.warn(t('load_permissions_api_error'));
         this.permissions = fallbackPermissions;
       }
     } catch (err) {
-      console.error('[Roles] Lỗi tải permissions:', err);
+      console.error(t('load_permissions_error'), err);
       this.permissions = fallbackPermissions;
     }
 
@@ -115,16 +116,17 @@ export const RolesView = {
     this.renderPermissionsGrid();
 
     try {
-      // 2. Fetch roles
+      // 2. Fetch roles (always call API directly, but sync cache)
       const rolesResponse = await api.get('roles');
       if (rolesResponse && rolesResponse.success && Array.isArray(rolesResponse.data)) {
         this.roles = rolesResponse.data;
+        sessionStorage.setItem('chat_roles_cache', JSON.stringify(this.roles));
       } else {
-        console.warn('[Roles] Không tải được danh sách roles từ API, hiển thị trống.');
+        console.warn(t('load_roles_api_error'));
         this.roles = [];
       }
     } catch (err) {
-      console.error('[Roles] Lỗi tải roles:', err);
+      console.error(t('load_roles_error'), err);
       this.roles = [];
     }
 
@@ -142,7 +144,7 @@ export const RolesView = {
     if (this.permissions.length === 0) {
       grid.innerHTML = `
         <div style="grid-column: 1/-1; text-align: center; padding: 20px; color: var(--text-muted);">
-          Không có quyền hạn nào được cấu hình
+          ${t('no_permissions_configured')}
         </div>
       `;
       return;
@@ -171,7 +173,7 @@ export const RolesView = {
     if (this.roles.length === 0) {
       container.innerHTML = `
         <div class="no-roles-fallback">
-          Chưa có vai trò nào được cấu hình.
+          ${t('no_roles_configured')}
         </div>
       `;
       return;
@@ -182,12 +184,12 @@ export const RolesView = {
       const isDeleted = role.deletedAt !== null && role.deletedAt !== undefined;
       const permsHtml = Array.isArray(role.permissions) && role.permissions.length > 0
         ? role.permissions.map(p => `<span class="permission-tag">${p.permissionName}</span>`).join('')
-        : `<span class="permission-tag" style="background: hsla(350, 0%, 50%, 0.1); color: var(--text-muted); border: 1px dashed hsla(0, 0%, 50%, 0.2)">Không có quyền</span>`;
+        : `<span class="permission-tag" style="background: hsla(350, 0%, 50%, 0.1); color: var(--text-muted); border: 1px dashed hsla(0, 0%, 50%, 0.2)">${t('no_permissions')}</span>`;
 
       // Set actions and style variables depending on soft-deleted state
       const actionsHtml = isDeleted
         ? `
-          <button class="btn-icon restore btn-restore-role" data-id="${role.roleId}" title="Phục hồi vai trò">
+          <button class="btn-icon restore btn-restore-role" data-id="${role.roleId}" title="${t('restore_role_title')}">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
               <polyline points="3 3 3 8 8 8"/>
@@ -195,13 +197,13 @@ export const RolesView = {
           </button>
         `
         : `
-          <button class="btn-icon btn-edit-role" data-id="${role.roleId}" title="Chỉnh sửa">
+          <button class="btn-icon btn-edit-role" data-id="${role.roleId}" title="${t('edit')}">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
               <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"></path>
             </svg>
           </button>
-          <button class="btn-icon delete btn-delete-role" data-id="${role.roleId}" title="Xóa">
+          <button class="btn-icon delete btn-delete-role" data-id="${role.roleId}" title="${t('delete')}">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="3 6 5 6 21 6"></polyline>
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -209,20 +211,21 @@ export const RolesView = {
           </button>
         `;
 
-      const titleBadge = isDeleted ? `<span class="deleted-role-badge">Đã xóa</span>` : '';
+      const titleBadge = isDeleted ? `<span class="deleted-role-badge">${t('deleted_badge')}</span>` : '';
       let deleteInfoHtml = '';
       if (isDeleted) {
         try {
-          const localDeletedAt = new Date(role.deletedAt).toLocaleString('vi-VN', {
+          const lang = localStorage.getItem('chat_lang') || 'vi';
+          const localDeletedAt = new Date(role.deletedAt).toLocaleString(lang === 'vi' ? 'vi-VN' : 'en-US', {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric',
             hour: '2-digit',
             minute: '2-digit'
           });
-          deleteInfoHtml = `<div class="role-delete-info">Đã xóa: ${localDeletedAt} • Sẽ bị xóa vĩnh viễn sau 7 ngày</div>`;
+          deleteInfoHtml = `<div class="role-delete-info">${t('role_deleted_info_with_time').replace('{time}', localDeletedAt)}</div>`;
         } catch (e) {
-          deleteInfoHtml = `<div class="role-delete-info">Đã xóa • Sẽ bị xóa vĩnh viễn sau 7 ngày</div>`;
+          deleteInfoHtml = `<div class="role-delete-info">${t('role_deleted_info')}</div>`;
         }
       }
 
@@ -288,7 +291,7 @@ export const RolesView = {
     this.editingRoleId = role.roleId;
 
     // UI Updates
-    document.getElementById('form-header-title').textContent = 'Cập nhật Vai trò';
+    document.getElementById('form-header-title').textContent = t('update_role_title');
     document.getElementById('input-role-name').value = role.roleName;
     document.getElementById('btn-cancel-edit').style.display = 'inline-flex';
 
@@ -315,7 +318,7 @@ export const RolesView = {
    */
   resetForm() {
     this.editingRoleId = null;
-    document.getElementById('form-header-title').textContent = 'Thêm Vai trò mới';
+    document.getElementById('form-header-title').textContent = t('add_role_title');
     document.getElementById('input-role-name').value = '';
     document.getElementById('btn-cancel-edit').style.display = 'none';
 
@@ -352,22 +355,23 @@ export const RolesView = {
         const response = await api.put('roles', payload);
         if (response && response.success) {
           await showDialog({
-            title: 'Cập nhật thành công',
-            message: `Vai trò "${roleName}" đã được cập nhật thành công.`,
+            title: t('update_success_title'),
+            message: t('role_update_success_msg').replace('{name}', roleName),
             type: 'success',
-            buttons: [{ text: 'Đóng', type: 'primary', value: true }]
+            buttons: [{ text: t('close'), type: 'primary', value: true }]
           });
           const updatedRole = response.data;
           if (updatedRole) {
             const index = this.roles.findIndex(r => String(r.roleId) === String(this.editingRoleId));
             if (index !== -1) {
               this.roles[index] = updatedRole;
+              sessionStorage.setItem('chat_roles_cache', JSON.stringify(this.roles));
             }
           }
           this.resetForm();
           this.renderRolesList();
         } else {
-          throw new Error(response?.message || 'Có lỗi xảy ra khi cập nhật vai trò');
+          throw new Error(response?.message || t('role_save_failed_msg'));
         }
       } else {
         // ADD ROLE (POST roles)
@@ -379,28 +383,29 @@ export const RolesView = {
         const response = await api.post('roles', payload);
         if (response && response.success) {
           await showDialog({
-            title: 'Thêm thành công',
-            message: `Vai trò "${roleName}" đã được thêm thành công.`,
+            title: t('add_success_title'),
+            message: t('role_add_success_msg').replace('{name}', roleName),
             type: 'success',
-            buttons: [{ text: 'Đóng', type: 'primary', value: true }]
+            buttons: [{ text: t('close'), type: 'primary', value: true }]
           });
           const newRole = response.data;
           if (newRole) {
             this.roles.push(newRole);
+            sessionStorage.setItem('chat_roles_cache', JSON.stringify(this.roles));
           }
           this.resetForm();
           this.renderRolesList();
         } else {
-          throw new Error(response?.message || 'Có lỗi xảy ra khi thêm vai trò');
+          throw new Error(response?.message || t('role_save_failed_msg'));
         }
       }
     } catch (err) {
-      console.error('[Roles] Lỗi khi lưu vai trò:', err);
+      console.error(t('load_roles_error'), err);
       await showDialog({
-        title: 'Lỗi hệ thống',
-        message: err.message || 'Không thể lưu vai trò. Vui lòng thử lại sau.',
+        title: t('system_error_title'),
+        message: err.message || t('role_save_failed_msg'),
         type: 'error',
-        buttons: [{ text: 'Đồng ý', type: 'primary', value: true }]
+        buttons: [{ text: t('ok'), type: 'primary', value: true }]
       });
     }
   },
@@ -413,12 +418,12 @@ export const RolesView = {
     if (!role) return;
 
     const confirm = await showDialog({
-      title: 'Xác nhận xóa',
-      message: `Bạn có chắc chắn muốn xóa vai trò "${role.roleName}"? Hành động này không thể hoàn tác.`,
+      title: t('confirm_delete_title'),
+      message: t('role_delete_confirm_msg').replace('{name}', role.roleName),
       type: 'warning',
       buttons: [
-        { text: 'Hủy', type: 'secondary', value: false },
-        { text: 'Xóa vai trò', type: 'danger', value: true }
+        { text: t('cancel_btn'), type: 'secondary', value: false },
+        { text: t('delete_role_btn'), type: 'danger', value: true }
       ]
     });
 
@@ -427,10 +432,10 @@ export const RolesView = {
         const response = await api.delete(`roles/${roleId}`);
         if (response && response.success) {
           await showDialog({
-            title: 'Đã xóa',
-            message: `Vai trò "${role.roleName}" đã được xóa thành công.`,
+            title: t('deleted_badge'),
+            message: t('role_delete_success_msg').replace('{name}', role.roleName),
             type: 'success',
-            buttons: [{ text: 'Đóng', type: 'primary', value: true }]
+            buttons: [{ text: t('close'), type: 'primary', value: true }]
           });
           if (this.editingRoleId === roleId) {
             this.resetForm();
@@ -439,18 +444,19 @@ export const RolesView = {
           if (roleIndex !== -1) {
             const deletedRole = response.data;
             this.roles[roleIndex].deletedAt = (deletedRole && deletedRole.deletedAt) || new Date().toISOString();
+            sessionStorage.setItem('chat_roles_cache', JSON.stringify(this.roles));
           }
           this.renderRolesList();
         } else {
-          throw new Error(response?.message || 'Có lỗi xảy ra khi xóa vai trò');
+          throw new Error(response?.message || t('role_delete_failed_msg'));
         }
       } catch (err) {
         console.error('[Roles] Lỗi khi xóa vai trò:', err);
         await showDialog({
-          title: 'Lỗi xóa vai trò',
-          message: err.message || 'Không thể xóa vai trò. Vui lòng thử lại sau.',
+          title: t('role_delete_failed_title'),
+          message: err.message || t('role_delete_failed_msg'),
           type: 'error',
-          buttons: [{ text: 'Đồng ý', type: 'primary', value: true }]
+          buttons: [{ text: t('ok'), type: 'primary', value: true }]
         });
       }
     }
@@ -464,12 +470,12 @@ export const RolesView = {
     if (!role) return;
 
     const confirm = await showDialog({
-      title: 'Xác nhận phục hồi',
-      message: `Bạn có chắc chắn muốn phục hồi vai trò "${role.roleName}"?`,
+      title: t('confirm_restore_title'),
+      message: t('role_restore_confirm_msg').replace('{name}', role.roleName),
       type: 'info',
       buttons: [
-        { text: 'Hủy', type: 'secondary', value: false },
-        { text: 'Phục hồi', type: 'primary', value: true }
+        { text: t('cancel_btn'), type: 'secondary', value: false },
+        { text: t('restore'), type: 'primary', value: true }
       ]
     });
 
@@ -478,26 +484,27 @@ export const RolesView = {
         const response = await api.patch(`roles/restore/${roleId}`);
         if (response && response.success) {
           await showDialog({
-            title: 'Phục hồi thành công',
-            message: `Vai trò "${role.roleName}" đã được khôi phục thành công.`,
+            title: t('restore_success_title'),
+            message: t('role_restore_success_msg').replace('{name}', role.roleName),
             type: 'success',
-            buttons: [{ text: 'Đóng', type: 'primary', value: true }]
+            buttons: [{ text: t('close'), type: 'primary', value: true }]
           });
           const roleIndex = this.roles.findIndex(r => String(r.roleId) === String(roleId));
           if (roleIndex !== -1) {
             this.roles[roleIndex].deletedAt = null;
+            sessionStorage.setItem('chat_roles_cache', JSON.stringify(this.roles));
           }
           this.renderRolesList();
         } else {
-          throw new Error(response?.message || 'Có lỗi xảy ra khi phục hồi vai trò');
+          throw new Error(response?.message || t('role_restore_failed_msg'));
         }
       } catch (err) {
         console.error('[Roles] Lỗi khi phục hồi vai trò:', err);
         await showDialog({
-          title: 'Lỗi phục hồi',
-          message: err.message || 'Không thể phục hồi vai trò. Vui lòng thử lại sau.',
+          title: t('role_restore_failed_title'),
+          message: err.message || t('role_restore_failed_msg'),
           type: 'error',
-          buttons: [{ text: 'Đồng ý', type: 'primary', value: true }]
+          buttons: [{ text: t('ok'), type: 'primary', value: true }]
         });
       }
     }

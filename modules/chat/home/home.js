@@ -1,16 +1,17 @@
 import { showDialog } from '../../../js/shared/dialog/dialog.js';
 import { api } from '../../../js/core/api.js';
 import { socket } from '../../../js/core/websocket.js';
-import { renderMessages, updateChatHeader, renderEmptyChatFrame } from './chat-frame.js';
-import { renderConversationsList } from './conversations.js';
-import { AttachmentHandler } from './attachment-handler.js';
-import { VoiceRecorder } from './voice-recorder.js';
-import { SeenResolver } from './message-seen-resolver.js';
-import { handleSocketEvent } from './socket-event-handler.js';
-import { OfflineQueueHandler } from './offline-queue-handler.js';
-import { MessageSender } from './message-sender.js';
-import { ConversationHandler } from './conversation-handler.js';
-import { MessageLoader } from './message-loader.js';
+import { t } from '../../../js/core/i18n.js';
+import { renderMessages, updateChatHeader, renderEmptyChatFrame } from './components/chat-frame.js';
+import { renderConversationsList } from './components/conversations.js';
+import { AttachmentHandler } from './handlers/attachment-handler.js';
+import { VoiceRecorder } from './handlers/voice-recorder.js';
+import { SeenResolver } from './handlers/message-seen-resolver.js';
+import { handleSocketEvent } from './handlers/socket-event-handler.js';
+import { OfflineQueueHandler } from './handlers/offline-queue-handler.js';
+import { MessageSender } from './handlers/message-sender.js';
+import { ConversationHandler } from './handlers/conversation-handler.js';
+import { MessageLoader } from './handlers/message-loader.js';
 
 export const HomeView = {
   messages: [],
@@ -49,18 +50,18 @@ export const HomeView = {
             >
             <div class="profile-info">
               <h4 id="sidebar-user-name">${nickname}</h4>
-              <p id="sidebar-user-status" style="color: var(--success, #10b981)">Online</p>
+              <p id="sidebar-user-status" style="color: var(--success, #10b981)">${navigator.onLine ? t('connected') : t('disconnected')}</p>
             </div>
           </div>
 
           <div class="sidebar-search" style="display: none;">
-            <input type="text" class="form-input" placeholder="Tìm bạn bè..." style="padding: 8px 12px; font-size: 0.85rem;">
+            <input type="text" class="form-input" placeholder="${t('search_placeholder')}" style="padding: 8px 12px; font-size: 0.85rem;">
           </div>
 
           <div class="conversations-list" id="conversations-list-container">
             <div class="list-fallback-state" style="padding: 20px; text-align: center;">
               <div class="spinner-sm" style="margin: 0 auto 8px;"></div>
-              Đang tải danh sách...
+              ${t('loading_list')}
             </div>
           </div>
         </div>
@@ -81,7 +82,7 @@ export const HomeView = {
           <!-- Typing Indicator -->
           <div id="typing-indicator" class="voice-recording-indicator" style="display: none; align-self: flex-start; margin: 0 20px 10px 20px; width: auto; max-width: 60%; background-color: hsla(230, 25%, 20%, 0.35); border: 1px solid var(--border-color); color: var(--text-secondary); font-size: 0.85rem; padding: 6px 12px; border-radius: var(--radius-md); border-bottom-left-radius: 4px;">
             <span class="voice-recording-dot" style="background-color: var(--text-secondary); width: 8px; height: 8px; animation: pulse-dot 1s infinite alternate;"></span>
-            <span>Đang soạn tin nhắn...</span>
+            <span>${t('typing')}</span>
           </div>
 
           <div class="chat-footer" style="display: flex; flex-direction: column; align-items: stretch; gap: 10px; padding: 15px 20px;">
@@ -96,13 +97,13 @@ export const HomeView = {
                   <polygon points="23 7 16 12 23 17 23 7"></polygon>
                   <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
                 </svg>
-                <span>Gửi video</span>
+                <span>${t('send_video')}</span>
               </button>
               <button id="menu-upload-file" class="menu-item">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
                 </svg>
-                <span>Tài liệu</span>
+                <span>${t('document')}</span>
               </button>
             </div>
 
@@ -115,8 +116,8 @@ export const HomeView = {
             <!-- Voice Recording Indicator -->
             <div id="voice-recording-indicator" class="voice-recording-indicator" style="display: none; align-items: center; justify-content: center;">
               <span class="voice-recording-dot"></span>
-              <span>Đang ghi âm: <span id="voice-duration">00:00</span></span>
-              <button id="btn-cancel-voice" class="btn btn-secondary" style="width: auto; height: 32px; padding: 0 12px; margin-left: 15px; font-size: 0.8rem; border-color: rgba(239, 68, 68, 0.4); color: #ef4444; background: rgba(239, 68, 68, 0.05); border-radius: var(--radius-sm); font-weight: 500;">Huỷ</button>
+              <span>${t('recording')}: <span id="voice-duration">00:00</span></span>
+              <button id="btn-cancel-voice" class="btn btn-secondary" style="width: auto; height: 32px; padding: 0 12px; margin-left: 15px; font-size: 0.8rem; border-color: rgba(239, 68, 68, 0.4); color: #ef4444; background: rgba(239, 68, 68, 0.05); border-radius: var(--radius-sm); font-weight: 500;">${t('voice_preview_cancel')}</button>
             </div>
 
             <!-- Voice Preview Container -->
@@ -126,15 +127,15 @@ export const HomeView = {
                 <audio id="voice-preview-player" controls style="height: 32px; flex: 1; min-width: 150px; outline: none;"></audio>
               </div>
               <div style="display: flex; gap: 10px;">
-                <button id="btn-cancel-voice-preview" class="btn btn-secondary" style="width: auto; height: 32px; padding: 0 12px; font-size: 0.85rem; border-color: rgba(239, 68, 68, 0.4); color: #ef4444; background: rgba(239, 68, 68, 0.05); border-radius: var(--radius-sm); font-weight: 500;">Huỷ</button>
-                <button id="btn-send-voice-preview" class="btn btn-primary" style="width: auto; height: 32px; padding: 0 12px; font-size: 0.85rem; border-radius: var(--radius-sm); font-weight: 500;">Gửi</button>
+                <button id="btn-cancel-voice-preview" class="btn btn-secondary" style="width: auto; height: 32px; padding: 0 12px; font-size: 0.85rem; border-color: rgba(239, 68, 68, 0.4); color: #ef4444; background: rgba(239, 68, 68, 0.05); border-radius: var(--radius-sm); font-weight: 500;">${t('voice_preview_cancel')}</button>
+                <button id="btn-send-voice-preview" class="btn btn-primary" style="width: auto; height: 32px; padding: 0 12px; font-size: 0.85rem; border-radius: var(--radius-sm); font-weight: 500;">${t('voice_preview_send')}</button>
               </div>
             </div>
 
             <!-- Input actions row -->
             <div class="chat-input-row" style="display: flex; align-items: center; gap: 15px; width: 100%;">
               <!-- Mobile actions trigger button (+) -->
-              <button id="btn-toggle-extra-actions" class="btn btn-secondary chat-footer-btn mobile-actions-trigger" title="Thêm hành động" style="width: 40px; min-width: 40px; height: 40px; padding: 0; display: none; align-items: center; justify-content: center; border-radius: 50%;">
+              <button id="btn-toggle-extra-actions" class="btn btn-secondary chat-footer-btn mobile-actions-trigger" title="${t('more_actions')}" style="width: 40px; min-width: 40px; height: 40px; padding: 0; display: none; align-items: center; justify-content: center; border-radius: 50%;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <line x1="12" y1="5" x2="12" y2="19"></line>
                   <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -142,7 +143,7 @@ export const HomeView = {
               </button>
 
               <!-- Image button stays outside on both mobile and desktop -->
-              <button id="btn-upload-image" class="btn btn-secondary chat-footer-btn" title="Gửi ảnh" style="width: 40px; min-width: 40px; height: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%;">
+              <button id="btn-upload-image" class="btn btn-secondary chat-footer-btn" title="${t('send_image')}" style="width: 40px; min-width: 40px; height: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                   <circle cx="8.5" cy="8.5" r="1.5"></circle>
@@ -151,7 +152,7 @@ export const HomeView = {
               </button>
 
               <!-- Video button stays outside on desktop, hidden on mobile -->
-              <button id="btn-upload-video" class="btn btn-secondary chat-footer-btn desktop-only-action" title="Gửi video" style="width: 40px; min-width: 40px; height: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%;">
+              <button id="btn-upload-video" class="btn btn-secondary chat-footer-btn desktop-only-action" title="${t('send_video')}" style="width: 40px; min-width: 40px; height: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polygon points="23 7 16 12 23 17 23 7"></polygon>
                   <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
@@ -159,7 +160,7 @@ export const HomeView = {
               </button>
               
               <!-- Voice recorder button stays outside on both mobile and desktop -->
-              <button id="btn-record-voice" class="btn btn-secondary chat-footer-btn" title="Ghi âm giọng nói" style="width: 40px; min-width: 40px; height: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%;">
+              <button id="btn-record-voice" class="btn btn-secondary chat-footer-btn" title="${t('record_voice')}" style="width: 40px; min-width: 40px; height: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="mic-icon">
                   <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
                   <path d="M19 10v1a7 7 0 0 1-14 0v-1"></path>
@@ -169,7 +170,7 @@ export const HomeView = {
               </button>
 
               <!-- File button stays outside on desktop, hidden on mobile -->
-              <button id="btn-upload-file" class="btn btn-secondary chat-footer-btn desktop-only-action" title="Gửi tài liệu" style="width: 40px; min-width: 40px; height: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%;">
+              <button id="btn-upload-file" class="btn btn-secondary chat-footer-btn desktop-only-action" title="${t('send_document')}" style="width: 40px; min-width: 40px; height: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
                 </svg>
@@ -178,13 +179,13 @@ export const HomeView = {
               <textarea 
                 id="message-input" 
                 class="form-input" 
-                placeholder="Nhập nội dung tin nhắn..." 
+                placeholder="${t('input_placeholder')}" 
                 autocomplete="off"
                 rows="1"
                 style="resize: none; height: 44px; min-height: 44px; max-height: 120px; padding: 10px 16px; flex: 1; line-height: 1.4; overflow-y: auto;"
               ></textarea>
               <button id="btn-send-message" class="btn btn-primary" style="width: auto;">
-                Gửi
+                ${t('send')}
               </button>
             </div>
           </div>
@@ -357,7 +358,7 @@ export const HomeView = {
       msgContainer.addEventListener('touchend', this.msgTouchEndListener, { passive: true });
     }
 
-    // 1. WebSocket: Chỉ subscribe đúng 1 topic duy nhất theo userId của chính mình
+    // 1. WebSocket: Subscribe topic theo userId và topic thông báo lỗi hệ thống
     const localUserId = localStorage.getItem('chat_user_id');
     const setupWebSocket = (uid) => {
       if (!uid) return;
@@ -369,37 +370,123 @@ export const HomeView = {
       setupWebSocket(localUserId);
     }
 
-    // Gọi tới api profiles/short để lấy thông tin cá nhân của bản thân mình
+    // Gọi tới api profiles/short để lấy thông tin cá nhân của bản thân mình (sử dụng sessionStorage cache)
     const userEmail = localStorage.getItem('chat_user_email') || 'user@example.com';
     const fallbackNickname = userEmail.split('@')[0];
 
-    api.get('profiles/short').then(res => {
-      if (res && res.success && res.data) {
-        const profile = res.data;
-        if (profile.userId) {
-          localStorage.setItem('chat_user_id', profile.userId);
-          if (String(profile.userId) !== String(localUserId)) {
-            setupWebSocket(profile.userId);
-          }
-        }
-
-        // Cập nhật thông tin lên sidebar
-        const avatarEl = document.getElementById('sidebar-user-avatar');
-        const nameEl = document.getElementById('sidebar-user-name');
-
-        if (avatarEl && profile.avatarUrl) {
-          avatarEl.src = profile.avatarUrl;
-        }
-        if (nameEl) {
-          nameEl.textContent = profile.fullName || profile.username || fallbackNickname;
+    const updateSidebarProfile = (profile) => {
+      if (profile.userId) {
+        localStorage.setItem('chat_user_id', profile.userId);
+        if (String(profile.userId) !== String(localUserId)) {
+          setupWebSocket(profile.userId);
         }
       }
-    }).catch(err => {
-      console.warn('Failed to fetch user short profile');
-    });
+
+      // Cập nhật thông tin lên sidebar
+      const avatarEl = document.getElementById('sidebar-user-avatar');
+      const nameEl = document.getElementById('sidebar-user-name');
+
+      if (avatarEl && profile.avatarUrl) {
+        avatarEl.src = profile.avatarUrl;
+      }
+      if (nameEl) {
+        nameEl.textContent = profile.fullName || profile.username || fallbackNickname;
+      }
+      
+      // Attach click listener to avatar to navigate to profile page
+      if (avatarEl) {
+        avatarEl.style.cursor = 'pointer';
+        avatarEl.addEventListener('click', () => {
+          // Navigate to profile page using router
+          if (this.router) {
+            this.router.navigate('profile');
+          }
+        });
+      }
+    };
+
+    const cachedShortProfile = sessionStorage.getItem('chat_profile_short');
+    if (cachedShortProfile) {
+      try {
+        const parsedProfile = JSON.parse(cachedShortProfile);
+        updateSidebarProfile(parsedProfile);
+      } catch (err) {
+        console.warn('Failed to parse cached short profile:', err);
+        sessionStorage.removeItem('chat_profile_short');
+      }
+    } else {
+      api.get('profiles/short').then(res => {
+        if (res && res.success && res.data) {
+          const profile = res.data;
+          sessionStorage.setItem('chat_profile_short', JSON.stringify(profile));
+          updateSidebarProfile(profile);
+        }
+      }).catch(err => {
+        console.warn('Failed to fetch user short profile');
+      });
+    }
 
     // Setup socket handler callback
-    this.onMessageReceived = (event) => {
+    this.onMessageReceived = (event, destination) => {
+      if (event && (event.type === 'ERROR' || event.eventType === 'ERROR')) {
+        const errorText = (event.message && typeof event.message === 'object' ? event.message.text : null)
+          || event.text
+          || (event.data && typeof event.data === 'object' ? event.data.text : null)
+          || t('unknown_system_error');
+        
+        const clientMsgId = event.clientMsgId
+          || (event.message && typeof event.message === 'object' ? event.message.clientMsgId : null)
+          || (event.data && typeof event.data === 'object' ? event.data.clientMsgId : null);
+
+        if (clientMsgId) {
+          // Tìm và cập nhật tin nhắn tương ứng thành trạng thái lỗi
+          let found = false;
+          const msg = this.messages.find(m => m.clientMsgId && String(m.clientMsgId) === String(clientMsgId));
+          if (msg) {
+            msg.status = 'failed';
+            found = true;
+          }
+
+          // Cập nhật trong cache sessionStorage cho tất cả các cuộc hội thoại
+          for (let i = 0; i < sessionStorage.length; i++) {
+            const key = sessionStorage.key(i);
+            if (key.startsWith('chat_messages_cache_')) {
+              try {
+                const cachedMsgs = JSON.parse(sessionStorage.getItem(key));
+                if (Array.isArray(cachedMsgs)) {
+                  const cachedMsg = cachedMsgs.find(m => m.clientMsgId && String(m.clientMsgId) === String(clientMsgId));
+                  if (cachedMsg) {
+                    cachedMsg.status = 'failed';
+                    sessionStorage.setItem(key, JSON.stringify(cachedMsgs));
+                    found = true;
+                  }
+                }
+              } catch (e) {
+                console.warn('Error updating cache for error status:', e);
+              }
+            }
+          }
+
+          if (found) {
+            this.renderMessages();
+          }
+        } else {
+          // Xóa bỏ tin nhắn đang trong trạng thái đang gửi hiện tại nếu không có clientMsgId cụ thể
+          this.messages = this.messages.filter(m => m.status !== 'pending' && m.status !== 'sending');
+          if (this.conversationId) {
+            sessionStorage.setItem(`chat_messages_cache_${this.conversationId}`, JSON.stringify(this.messages));
+          }
+          this.renderMessages();
+        }
+
+        showDialog({
+          title: t('send_message_error_title'),
+          message: errorText,
+          type: 'error',
+          buttons: [{ text: t('close'), type: 'primary', value: true }]
+        });
+        return;
+      }
       handleSocketEvent(this, event);
     };
     socket.addListener(this.onMessageReceived);
@@ -421,14 +508,17 @@ export const HomeView = {
       const statusEl = document.getElementById('sidebar-user-status');
       if (statusEl) {
         if (online) {
-          statusEl.textContent = 'Online';
+          statusEl.textContent = t('connected');
           statusEl.style.color = 'var(--success, #10b981)';
         } else {
-          statusEl.textContent = 'Mất kết nối';
+          statusEl.textContent = t('disconnected');
           statusEl.style.color = '#ef4444';
         }
       }
     };
+
+    // Initialize status text
+    updateConnectionStatus(navigator.onLine);
 
     socket.onConnectCallback = () => {
       updateConnectionStatus(true);
@@ -542,8 +632,8 @@ export const HomeView = {
             return;
           }
 
-          const title = payload.notification?.title || payload.data?.title || 'Thông báo mới';
-          const body = payload.notification?.body || payload.data?.body || 'Bạn có một tin nhắn mới.';
+          const title = payload.notification?.title || payload.data?.title || t('new_notification');
+          const body = payload.notification?.body || payload.data?.body || t('new_message_alert');
           const conversationId = payload.data?.conversationId || payload.data?.id;
           const messageId = payload.data?.messageId;
 
@@ -586,6 +676,33 @@ export const HomeView = {
       this.stagedFiles = AttachmentHandler.stageFiles(files, type, this.stagedFiles);
       this.renderStagedFiles();
     };
+
+    if (messageInput) {
+      messageInput.addEventListener('paste', (e) => {
+        const files = e.clipboardData?.files;
+        if (files && files.length > 0) {
+          e.preventDefault();
+          const images = [];
+          const videos = [];
+          const others = [];
+
+          for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            if (file.type.startsWith('image/')) {
+              images.push(file);
+            } else if (file.type.startsWith('video/')) {
+              videos.push(file);
+            } else {
+              others.push(file);
+            }
+          }
+
+          if (images.length > 0) stageFiles(images, 'IMAGE');
+          if (videos.length > 0) stageFiles(videos, 'VIDEO');
+          if (others.length > 0) stageFiles(others, 'FILE');
+        }
+      });
+    }
 
     if (btnUploadImage && imageUploadInput) {
       btnUploadImage.addEventListener('click', () => imageUploadInput.click());
@@ -812,26 +929,26 @@ export const HomeView = {
     const currentUserId = localStorage.getItem('chat_user_id') || 'user_me';
     const isSelf = String(msg.senderId) === String(currentUserId);
     
-    let senderName = 'Người dùng';
+    let senderName = t('user');
     if (isSelf) {
-      senderName = 'Bạn';
+      senderName = t('you');
     } else {
       const convo = this.conversations.find(c => String(c.conversationId) === String(this.conversationId));
       const senderObj = convo?.userConversations?.find(u => String(u.userId) === String(msg.senderId));
       if (senderObj) {
-        senderName = senderObj.fullName || senderObj.displayName || senderObj.username || 'Thành viên';
+        senderName = senderObj.fullName || senderObj.displayName || senderObj.username || t('member');
       }
     }
 
     let textSnippet = msg.text || '';
     if (msg.isRevoked) {
-      textSnippet = 'Tin nhắn đã bị thu hồi';
+      textSnippet = t('revoked_msg');
     } else {
       const type = String(msg.type || 'TEXT').toUpperCase();
-      if (type === 'IMAGE') textSnippet = '[Hình ảnh]';
-      else if (type === 'VIDEO') textSnippet = '[Video]';
-      else if (type === 'AUDIO') textSnippet = '[Tin nhắn thoại]';
-      else if (type === 'FILE') textSnippet = '[Tài liệu]';
+      if (type === 'IMAGE') textSnippet = t('snippet_image');
+      else if (type === 'VIDEO') textSnippet = t('snippet_video');
+      else if (type === 'AUDIO') textSnippet = t('snippet_audio');
+      else if (type === 'FILE') textSnippet = t('snippet_file');
     }
 
     container.innerHTML = `
@@ -842,11 +959,11 @@ export const HomeView = {
             <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
           </svg>
           <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1;">
-            <span style="font-size: 0.8rem; font-weight: 600; color: var(--accent-color);">Đang phản hồi ${senderName}</span>
+            <span style="font-size: 0.8rem; font-weight: 600; color: var(--accent-color);">${t('replying_to')} ${senderName}</span>
             <span style="font-size: 0.85rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;">${textSnippet}</span>
           </div>
         </div>
-        <button id="btn-cancel-reply" class="btn-cancel-reply" style="background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; padding: 0; transition: all 0.2s;" title="Hủy phản hồi">
+        <button id="btn-cancel-reply" class="btn-cancel-reply" style="background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; padding: 0; transition: all 0.2s;" title="${t('cancel_reply')}">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -894,7 +1011,7 @@ export const HomeView = {
         searchToast = document.createElement('div');
         searchToast.id = 'reply-search-toast';
         searchToast.style = 'position: absolute; top: 80px; left: 50%; transform: translateX(-50%); background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-full); padding: 6px 16px; font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); z-index: 999; pointer-events: none;';
-        searchToast.innerHTML = '<div class="spinner-sm" style="width: 12px; height: 12px; margin: 0;"></div> Đang tìm tin nhắn cũ hơn...';
+        searchToast.innerHTML = `<div class="spinner-sm" style="width: 12px; height: 12px; margin: 0;"></div> ${t('searching_older_messages')}`;
         const chatMain = document.querySelector('.chat-main');
         if (chatMain) chatMain.appendChild(searchToast);
       }
@@ -921,8 +1038,8 @@ export const HomeView = {
       
       const { showDialog } = await import('../../../js/shared/dialog/dialog.js');
       await showDialog({
-        title: 'Không tìm thấy tin nhắn',
-        message: 'Tin nhắn gốc đã quá cũ hoặc đã bị xóa.',
+        title: t('message_not_found_title'),
+        message: t('message_not_found_msg'),
         type: 'info'
       });
     }

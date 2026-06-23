@@ -1,3 +1,5 @@
+import { t } from '../../../../js/core/i18n.js';
+
 export const VoiceRecorder = {
   async start(ctx, micIcon, messageInput, voiceRecordingIndicator, voiceDuration, onStopCallback, showDialog) {
     try {
@@ -40,7 +42,7 @@ export const VoiceRecorder = {
         btnRecordVoice.style.background = '#ef4444';
         btnRecordVoice.style.color = '#ffffff';
         btnRecordVoice.style.borderColor = '#ef4444';
-        btnRecordVoice.title = 'Dừng ghi âm';
+        btnRecordVoice.title = t('stop_recording');
       }
       if (micIcon) {
         micIcon.innerHTML = `<rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>`;
@@ -58,8 +60,8 @@ export const VoiceRecorder = {
       console.error('Cannot access microphone:', err);
       if (showDialog) {
         await showDialog({
-          title: 'Lỗi truy cập Microphone',
-          message: 'Vui lòng cấp quyền truy cập microphone cho trình duyệt.',
+          title: t('mic_error_title'),
+          message: t('mic_error_message'),
           type: 'error'
         });
       }
@@ -96,7 +98,7 @@ export const VoiceRecorder = {
       btnRecordVoice.style.background = '';
       btnRecordVoice.style.color = '';
       btnRecordVoice.style.borderColor = '';
-      btnRecordVoice.title = 'Ghi âm giọng nói';
+      btnRecordVoice.title = t('record_voice');
     }
 
     if (micIcon) {
@@ -108,7 +110,9 @@ export const VoiceRecorder = {
       `;
     }
 
-    if (messageInput) messageInput.style.display = 'block';
+    if (messageInput) {
+      messageInput.style.display = 'block';
+    }
     if (voiceRecordingIndicator) voiceRecordingIndicator.style.display = 'none';
     if (sendBtn) sendBtn.style.display = 'block';
 

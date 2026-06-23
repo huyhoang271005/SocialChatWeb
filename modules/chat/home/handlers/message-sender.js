@@ -1,6 +1,6 @@
-import { api } from '../../../js/core/api.js';
-import { socket } from '../../../js/core/websocket.js';
-import { showDialog } from '../../../js/shared/dialog/dialog.js';
+import { api } from '../../../../js/core/api.js';
+import { socket } from '../../../../js/core/websocket.js';
+import { showDialog } from '../../../../js/shared/dialog/dialog.js';
 import { AttachmentHandler } from './attachment-handler.js';
 import { OfflineQueueHandler } from './offline-queue-handler.js';
 
@@ -128,11 +128,11 @@ export const MessageSender = {
             URL.revokeObjectURL(item.previewUrl);
           }
 
-          // Cập nhật tin nhắn tạm thời thành URL thật trên máy chủ
-          this.updateLocalMessageAfterUpload(ctx, targetConversationId, tempId, fileUrl);
+          // Gửi tin nhắn qua WebSocket và lấy clientMsgId sinh ra
+          const clientMsgId = socket.send(targetConversationId, fileUrl, item.type, fileId, replyMessageId);
 
-          // Gửi tin nhắn qua WebSocket
-          socket.send(targetConversationId, fileUrl, item.type, fileId, replyMessageId);
+          // Cập nhật tin nhắn tạm thời thành URL thật trên máy chủ cùng với ngId
+          this.updateLocalMessageAfterUpload(ctx, targetConversationId, tempId, fileUrl, clientMsgId);
         } else {
           throw new Error(res?.message || `Không thể tải lên tệp ${item.file.name}`);
         }
@@ -146,7 +146,7 @@ export const MessageSender = {
     }
   },
 
-  updateLocalMessageAfterUpload(ctx, conversationId, tempId, publicUrl) {
+  updateLocalMessageAfterUpload(ctx, conversationId, tempId, publicUrl, clientMsgId = null) {
     const cacheKey = `chat_messages_cache_${conversationId}`;
     const cached = sessionStorage.getItem(cacheKey);
     if (cached) {
@@ -155,6 +155,9 @@ export const MessageSender = {
         const msg = messages.find(m => String(m.id) === String(tempId));
         if (msg) {
           msg.text = publicUrl;
+          if (clientMsgId) {
+            msg.clientMsgId = clientMsgId;
+          }
           sessionStorage.setItem(cacheKey, JSON.stringify(messages));
         }
       } catch (e) {
@@ -166,6 +169,9 @@ export const MessageSender = {
       const msg = ctx.messages.find(m => String(m.id) === String(tempId));
       if (msg) {
         msg.text = publicUrl;
+        if (clientMsgId) {
+          msg.clientMsgId = clientMsgId;
+        }
         ctx.renderMessages();
       }
     }
@@ -260,11 +266,11 @@ export const MessageSender = {
         // Thu hồi URL xem trước cục bộ để giải phóng bộ nhớ
         URL.revokeObjectURL(previewUrl);
 
-        // Cập nhật tin nhắn tạm thời thành URL thật trên máy chủ
-        this.updateLocalMessageAfterUpload(ctx, targetConversationId, tempId, fileUrl);
+        // Gửi qua WebSocket và lấy clientMsgId sinh ra
+        const clientMsgId = socket.send(targetConversationId, fileUrl, type, fileId, replyMessageId);
 
-        // Gửi qua WebSocket
-        socket.send(targetConversationId, fileUrl, type, fileId, replyMessageId);
+        // Cập nhật tin nhắn tạm thời thành URL thật trên máy chủ kèm theo clientMsgId
+        this.updateLocalMessageAfterUpload(ctx, targetConversationId, tempId, fileUrl, clientMsgId);
       } else {
         throw new Error(res?.message || `Không thể tải lên tệp tin`);
       }

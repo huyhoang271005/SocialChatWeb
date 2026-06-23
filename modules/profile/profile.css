@@ -1,9 +1,19 @@
 /* Profile Dashboard Stylesheet */
 
 .profile-dashboard {
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  max-width: 1000px;
+  max-width: 100%;
   margin: 0 auto;
+  min-height: 100%;
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: none;
+  border-radius: 0;
+  padding: 30px;
+  box-shadow: none;
   position: relative;
   overflow: hidden;
   animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -64,7 +74,7 @@
   }
 
   .profile-dashboard {
-    padding: 0;
+    padding: 16px;
   }
 
   .profile-header-bar {
@@ -107,20 +117,18 @@
 
 /* Base Profile Card */
 .profile-card {
-  background: var(--bg-card);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: hsla(230, 25%, 6%, 0.3);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   padding: 24px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  box-shadow: none;
   transition: var(--transition-smooth);
 }
 
 .profile-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
-  border-color: hsla(230, 100%, 80%, 0.15);
+  border-color: var(--accent-color);
+  box-shadow: 0 0 15px var(--accent-glow);
 }
 
 /* Main Info Card Specifics */
@@ -290,56 +298,7 @@
 }
 
 /* Badges and Tags styling */
-.role-badge,
-.status-badge {
-  padding: 4px 10px;
-  border-radius: var(--radius-sm);
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border: 1px solid transparent;
-}
-
-/* Role badge colors */
-.role-admin {
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
-  border-color: rgba(239, 68, 68, 0.3);
-}
-
-.role-superadmin {
-  background: rgba(168, 85, 247, 0.15);
-  color: #c084fc;
-  border-color: rgba(168, 85, 247, 0.3);
-}
-
-.role-user,
-.role-customer {
-  background: rgba(59, 130, 246, 0.15);
-  color: #60a5fa;
-  border-color: rgba(59, 130, 246, 0.3);
-}
-
-/* Status badge colors */
-.status-active {
-  background: rgba(16, 185, 129, 0.15);
-  color: #34d399;
-  border-color: rgba(16, 185, 129, 0.3);
-}
-
-.status-locked,
-.status-pending {
-  background: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
-  border-color: rgba(245, 158, 11, 0.3);
-}
-
-.status-banned {
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
-  border-color: rgba(239, 68, 68, 0.3);
-}
+/* Common .role-badge and .status-badge styles are defined in common.css */
 
 /* Custom Gender Buttons */
 .gender-selector {

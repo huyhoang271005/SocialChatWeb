@@ -1,4 +1,5 @@
-import { socket } from '../../../js/core/websocket.js';
+import { socket } from '../../../../js/core/websocket.js';
+import { t, formatSystemMessage } from '../../../../js/core/i18n.js';
 
 function mergeConversation(oldConvo, newConvoDto) {
   if (oldConvo && oldConvo.userConversations && newConvoDto && newConvoDto.userConversations) {
@@ -13,7 +14,11 @@ function mergeConversation(oldConvo, newConvoDto) {
       }
     });
   }
-  return { ...oldConvo, ...newConvoDto };
+  const merged = { ...oldConvo, ...newConvoDto };
+  if (merged.unreadMessage !== undefined && merged.unreadMessage !== null) {
+    merged.unreadMessage = parseInt(merged.unreadMessage || 0, 10);
+  }
+  return merged;
 }
 
 function formatMessageTime(createdAt) {
@@ -99,18 +104,18 @@ export function handleSocketEvent(ctx, event) {
                                  otherParticipant.displayName ||
                                  otherParticipant.username ||
                                  otherParticipant.user?.username ||
-                                 'Người dùng';
+                                 t('user');
                   if (otherParticipant.avatarUrl || otherParticipant.user?.avatarUrl) {
                     avatarUrl = otherParticipant.avatarUrl || otherParticipant.user.avatarUrl;
                   }
                 } else {
-                  displayTitle = 'Người dùng';
+                  displayTitle = t('user');
                 }
               }
               ctx.updateChatHeader(
-                displayTitle || ('Cuộc trò chuyện ' + activeConvo.conversationId),
+                displayTitle || (t('chat') + ' #' + activeConvo.conversationId),
                 avatarUrl,
-                activeConvo.group ? 'Nhóm trò chuyện' : 'Đang hoạt động',
+                activeConvo.group ? t('group_chat_prefix') : t('online'),
                 activeConvo.conversationId,
                 ctx.conversations
               );
@@ -157,18 +162,18 @@ export function handleSocketEvent(ctx, event) {
                                  otherParticipant.displayName ||
                                  otherParticipant.username ||
                                  otherParticipant.user?.username ||
-                                 'Người dùng';
+                                 t('user');
                   if (otherParticipant.avatarUrl || otherParticipant.user?.avatarUrl) {
                     avatarUrl = otherParticipant.avatarUrl || otherParticipant.user.avatarUrl;
                   }
                 } else {
-                  displayTitle = 'Người dùng';
+                  displayTitle = t('user');
                 }
               }
               ctx.updateChatHeader(
-                displayTitle || ('Cuộc trò chuyện ' + convo.conversationId),
+                displayTitle || (t('chat') + ' #' + convo.conversationId),
                 avatarUrl,
-                convo.group ? 'Nhóm trò chuyện' : 'Đang hoạt động',
+                convo.group ? t('group_chat_prefix') : t('online'),
                 convo.conversationId,
                 ctx.conversations
               );
@@ -202,10 +207,23 @@ export function handleSocketEvent(ctx, event) {
       if (messageDto && messageDto.conversationId) {
         const activeConvoId = String(ctx.conversationId);
         const incomingConvoId = String(messageDto.conversationId);
+        const incomingClientMsgId = event.clientMsgId || messageDto.clientMsgId || (event.data && event.data.clientMsgId);
 
         const senderId = messageDto.senderId !== undefined && messageDto.senderId !== null ? messageDto.senderId : messageDto.sender?.userId;
-        const messageText = messageDto.text || messageDto.message;
+        let messageText = messageDto.text || messageDto.message || '';
+        const msgType = String(messageDto.type || 'TEXT').toUpperCase();
+
+        const isSystemMsg = msgType === 'REMOVE_MEMBER' || msgType === 'ADD_MEMBER' || msgType === 'LEAVED';
+        let rawText = messageText;
+        if (isSystemMsg) {
+          messageDto.rawText = rawText;
+          messageText = formatSystemMessage(msgType, rawText);
+          messageDto.text = messageText;
+        }
+
         const isRevoked = messageDto.revoked === true;
+
+
 
         const currentUserId = localStorage.getItem('chat_user_id') || 'user_me';
         const isMe = String(senderId) === String(currentUserId);
@@ -220,11 +238,21 @@ export function handleSocketEvent(ctx, event) {
             if (!isDuplicate) {
               if (incomingConvoId === activeConvoId) {
                 // For active conversation, handle resolving pending/sending states locally
-                let existingIndex = ctx.messages.findIndex(m =>
-                  m.sender === 'me' &&
-                  (m.status === 'pending' || m.status === 'sending') &&
-                  (m.text === messageText || m.text.trim() === messageText.trim())
-                );
+                let existingIndex = -1;
+                if (incomingClientMsgId) {
+                  existingIndex = ctx.messages.findIndex(m =>
+                    m.sender === 'me' &&
+                    (m.status === 'pending' || m.status === 'sending') &&
+                    String(m.clientMsgId) === String(incomingClientMsgId)
+                  );
+                }
+                if (existingIndex === -1) {
+                  existingIndex = ctx.messages.findIndex(m =>
+                    m.sender === 'me' &&
+                    (m.status === 'pending' || m.status === 'sending') &&
+                    (m.text === messageText || m.text.trim() === messageText.trim())
+                  );
+                }
                 if (existingIndex === -1) {
                   existingIndex = ctx.messages.findIndex(m =>
                     m.sender === 'me' &&
@@ -242,15 +270,16 @@ export function handleSocketEvent(ctx, event) {
                   ctx.messages[existingIndex].replyText = messageDto.replyText || ctx.messages[existingIndex].replyText || null;
                   ctx.messages[existingIndex].replyType = messageDto.replyType || ctx.messages[existingIndex].replyType || null;
                   ctx.messages[existingIndex].replyRevoked = messageDto.replyRevoked === true || ctx.messages[existingIndex].replyRevoked === true;
+                  ctx.messages[existingIndex].rawText = messageDto.rawText;
                   if (isRevoked) {
-                    ctx.messages[existingIndex].text = 'Tin nhắn đã bị thu hồi';
+                    ctx.messages[existingIndex].text = t('revoked_msg');
                   }
                 } else {
                   ctx.messages.push({
                     id: messageDto.messageId || messageDto.id || `msg_${Date.now()}`,
                     sender: isMe ? 'me' : 'them',
                     senderId: senderId,
-                    text: isRevoked ? 'Tin nhắn đã bị thu hồi' : messageText,
+                    text: isRevoked ? t('revoked_msg') : messageText,
                     type: messageDto.type || messageDto.messageType || 'TEXT',
                     time: formatMessageTime(messageDto.createdAt),
                     status: 'sent',
@@ -258,18 +287,29 @@ export function handleSocketEvent(ctx, event) {
                     replyMessageId: messageDto.replyMessageId || null,
                     replyText: messageDto.replyText || null,
                     replyType: messageDto.replyType || null,
-                    replyRevoked: messageDto.replyRevoked === true
+                    replyRevoked: messageDto.replyRevoked === true,
+                    rawText: messageDto.rawText
                   });
                 }
                 sessionStorage.setItem(targetCacheKey, JSON.stringify(ctx.messages));
                 ctx.renderMessages();
               } else {
                 // For inactive conversation, handle resolving pending/sending states locally in targetMsgs
-                let existingIndex = targetMsgs.findIndex(m =>
-                  m.sender === 'me' &&
-                  (m.status === 'pending' || m.status === 'sending') &&
-                  (m.text === messageText || m.text.trim() === messageText.trim())
-                );
+                let existingIndex = -1;
+                if (incomingClientMsgId) {
+                  existingIndex = targetMsgs.findIndex(m =>
+                    m.sender === 'me' &&
+                    (m.status === 'pending' || m.status === 'sending') &&
+                    String(m.clientMsgId) === String(incomingClientMsgId)
+                  );
+                }
+                if (existingIndex === -1) {
+                  existingIndex = targetMsgs.findIndex(m =>
+                    m.sender === 'me' &&
+                    (m.status === 'pending' || m.status === 'sending') &&
+                    (m.text === messageText || m.text.trim() === messageText.trim())
+                  );
+                }
                 if (existingIndex === -1) {
                   existingIndex = targetMsgs.findIndex(m =>
                     m.sender === 'me' &&
@@ -287,15 +327,16 @@ export function handleSocketEvent(ctx, event) {
                   targetMsgs[existingIndex].replyText = messageDto.replyText || targetMsgs[existingIndex].replyText || null;
                   targetMsgs[existingIndex].replyType = messageDto.replyType || targetMsgs[existingIndex].replyType || null;
                   targetMsgs[existingIndex].replyRevoked = messageDto.replyRevoked === true || targetMsgs[existingIndex].replyRevoked === true;
+                  targetMsgs[existingIndex].rawText = messageDto.rawText;
                   if (isRevoked) {
-                    targetMsgs[existingIndex].text = 'Tin nhắn đã bị thu hồi';
+                    targetMsgs[existingIndex].text = t('revoked_msg');
                   }
                 } else {
                   targetMsgs.push({
                     id: messageDto.messageId || messageDto.id || `msg_${Date.now()}`,
                     sender: isMe ? 'me' : 'them',
                     senderId: senderId,
-                    text: isRevoked ? 'Tin nhắn đã bị thu hồi' : messageText,
+                    text: isRevoked ? t('revoked_msg') : messageText,
                     type: messageDto.type || messageDto.messageType || 'TEXT',
                     time: formatMessageTime(messageDto.createdAt),
                     status: 'sent',
@@ -303,7 +344,8 @@ export function handleSocketEvent(ctx, event) {
                     replyMessageId: messageDto.replyMessageId || null,
                     replyText: messageDto.replyText || null,
                     replyType: messageDto.replyType || null,
-                    replyRevoked: messageDto.replyRevoked === true
+                    replyRevoked: messageDto.replyRevoked === true,
+                    rawText: messageDto.rawText
                   });
                 }
                 sessionStorage.setItem(targetCacheKey, JSON.stringify(targetMsgs));
@@ -320,7 +362,7 @@ export function handleSocketEvent(ctx, event) {
               id: messageDto.messageId || messageDto.id || `msg_${Date.now()}`,
               sender: isMe ? 'me' : 'them',
               senderId: senderId,
-              text: isRevoked ? 'Tin nhắn đã bị thu hồi' : messageText,
+              text: isRevoked ? t('revoked_msg') : messageText,
               type: messageDto.type || messageDto.messageType || 'TEXT',
               time: formatMessageTime(messageDto.createdAt),
               status: 'sent',
@@ -328,7 +370,8 @@ export function handleSocketEvent(ctx, event) {
               replyMessageId: messageDto.replyMessageId || null,
               replyText: messageDto.replyText || null,
               replyType: messageDto.replyType || null,
-              replyRevoked: messageDto.replyRevoked === true
+              replyRevoked: messageDto.replyRevoked === true,
+              rawText: messageDto.rawText
             });
             sessionStorage.setItem(targetCacheKey, JSON.stringify(ctx.messages));
             ctx.renderMessages();
@@ -343,13 +386,13 @@ export function handleSocketEvent(ctx, event) {
         if (incomingConvoId !== activeConvoId && !isMe) {
           // Hiển thị thông báo native nếu không ở trong hội thoại đó, không phải mình gửi và tab đang mở hiển thị
           if (document.visibilityState === 'visible') {
-            let senderName = 'Tin nhắn mới';
+            let senderName = t('new_message_alert');
             const convo = ctx.conversations.find(c => String(c.conversationId) === incomingConvoId);
             if (convo) {
               if (convo.group) {
-                senderName = convo.title || `Nhóm #${incomingConvoId}`;
+                senderName = convo.title || `${t('group_chat_prefix')} #${incomingConvoId}`;
               } else {
-                senderName = convo.title || `Trò chuyện #${incomingConvoId}`;
+                senderName = convo.title || `${t('chat')} #${incomingConvoId}`;
                 const otherParticipant = convo.userConversations?.find(u => String(u.userId) !== String(currentUserId));
                 const otherUserId = otherParticipant ? otherParticipant.userId : null;
                 if (otherUserId && ctx.profileCache.has(String(otherUserId))) {
@@ -357,11 +400,11 @@ export function handleSocketEvent(ctx, event) {
                 }
               }
             }
-            import('../../../js/core/firebase.js')
+            import('../../../../js/core/firebase.js')
               .then(({ showNativeNotification }) => {
                 showNativeNotification(
                   senderName,
-                  isRevoked ? 'Tin nhắn đã bị thu hồi' : messageText,
+                  isRevoked ? t('revoked_msg') : messageText,
                   incomingConvoId,
                   messageDto.messageId || messageDto.id
                 );
@@ -374,14 +417,20 @@ export function handleSocketEvent(ctx, event) {
         const convoIndex = ctx.conversations.findIndex(c => String(c.conversationId) === incomingConvoId);
         if (convoIndex !== -1) {
           const convo = ctx.conversations[convoIndex];
-          convo.lastMessageText = isRevoked ? 'Tin nhắn đã bị thu hồi' : messageText;
+          convo.lastMessage = messageDto;
+          convo.lastMessageText = isRevoked ? t('revoked_msg') : messageText;
           convo.lastMessageTime = messageDto.createdAt;
           convo.lastMessageId = messageDto.messageId || messageDto.id;
           convo.lastMessageSenderId = messageDto.senderId;
 
           // Tăng số tin nhắn chưa đọc của hội thoại nếu không phải mình gửi
           if (incomingConvoId !== activeConvoId && !isMe) {
-            convo.unreadMessage = (convo.unreadMessage || 0) + 1;
+            convo.unreadMessage = parseInt(convo.unreadMessage || 0, 10) + 1;
+            const currentUserId = localStorage.getItem('chat_user_id');
+            const myUserConvo = convo.userConversations?.find(u => String(u.userId) === String(currentUserId));
+            if (myUserConvo) {
+              myUserConvo.unreadMessage = parseInt(myUserConvo.unreadMessage || 0, 10) + 1;
+            }
           }
 
           ctx.conversations.splice(convoIndex, 1);
@@ -419,14 +468,14 @@ export function handleSocketEvent(ctx, event) {
             let updatedCache = false;
             const msgIndex = targetMsgs.findIndex(m => String(m.id) === targetMsgId);
             if (msgIndex !== -1) {
-              targetMsgs[msgIndex].text = 'Tin nhắn đã bị thu hồi';
+              targetMsgs[msgIndex].text = t('revoked_msg');
               targetMsgs[msgIndex].isRevoked = true;
               updatedCache = true;
             }
             // Update any replies to this message in cache
             targetMsgs.forEach(m => {
               if (m.replyMessageId && String(m.replyMessageId) === targetMsgId) {
-                m.replyText = 'Tin nhắn đã bị thu hồi';
+                m.replyText = t('revoked_msg');
                 m.replyRevoked = true;
                 updatedCache = true;
               }
@@ -443,14 +492,14 @@ export function handleSocketEvent(ctx, event) {
           let updatedActive = false;
           const msgIndex = ctx.messages.findIndex(m => String(m.id) === targetMsgId);
           if (msgIndex !== -1) {
-            ctx.messages[msgIndex].text = 'Tin nhắn đã bị thu hồi';
+            ctx.messages[msgIndex].text = t('revoked_msg');
             ctx.messages[msgIndex].isRevoked = true;
             updatedActive = true;
           }
           // Update any replies to this message in active messages list
           ctx.messages.forEach(m => {
             if (m.replyMessageId && String(m.replyMessageId) === targetMsgId) {
-              m.replyText = 'Tin nhắn đã bị thu hồi';
+              m.replyText = t('revoked_msg');
               m.replyRevoked = true;
               updatedActive = true;
             }
@@ -462,7 +511,7 @@ export function handleSocketEvent(ctx, event) {
 
         const convo = ctx.conversations.find(c => String(c.conversationId) === incomingConvoId);
         if (convo && convo.lastMessageId && String(convo.lastMessageId) === targetMsgId) {
-          convo.lastMessageText = 'Tin nhắn đã bị thu hồi';
+          convo.lastMessageText = t('revoked_msg');
           ctx.renderConversationsList();
         }
       }
@@ -537,7 +586,7 @@ export function handleSocketEvent(ctx, event) {
         if (incomingConvoId === activeConvoId && senderId && String(senderId) !== String(currentUserId)) {
           const typingIndicator = document.getElementById('typing-indicator');
           if (typingIndicator) {
-             let name = 'Ai đó';
+             let name = t('someone');
              const convo = ctx.conversations.find(c => String(c.conversationId) === incomingConvoId);
              const participant = convo?.userConversations?.find(u => String(u.userId) === String(senderId));
 
@@ -545,7 +594,7 @@ export function handleSocketEvent(ctx, event) {
                name = participant.fullName;
              } else if (ctx.profileCache.has(String(senderId))) {
                name = ctx.profileCache.get(String(senderId)).fullName;
-             } else if (convo && !convo.group && convo.title && convo.title !== 'Đang tải...') {
+             } else if (convo && !convo.group && convo.title && convo.title !== t('loading') + '...') {
                name = convo.title;
                ctx.profileCache.set(String(senderId), { fullName: name });
              } else if (participant) {
@@ -561,7 +610,7 @@ export function handleSocketEvent(ctx, event) {
             
             typingIndicator.innerHTML = `
               <span class="voice-recording-dot" style="background-color: var(--text-secondary); width: 8px; height: 8px; animation: pulse-dot 1s infinite alternate;"></span>
-              <span><strong>${name}</strong> đang soạn tin nhắn...</span>
+              <span><strong>${name}</strong> ${t('is_typing')}</span>
             `;
             typingIndicator.style.display = 'flex';
             
@@ -589,6 +638,8 @@ export function handleSocketEvent(ctx, event) {
         }
       }
       break;
+
+
 
     default:
       console.warn('Unknown WebSocket event type:', eventType);

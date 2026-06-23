@@ -1,5 +1,6 @@
 import { api } from '../../js/core/api.js';
 import { showDialog } from '../../js/shared/dialog/dialog.js';
+import { t } from '../../js/core/i18n.js';
 
 export const ProfileView = {
   profile: null,
@@ -20,17 +21,17 @@ export const ProfileView = {
         <!-- Loading Overlay -->
         <div class="loading-overlay" id="profile-loading">
           <div class="spinner"></div>
-          <div class="loading-text" id="profile-loading-text">Đang cập nhật hồ sơ...</div>
+          <div class="loading-text" id="profile-loading-text">${t('updating_profile')}</div>
         </div>
 
         <div class="profile-header-bar">
-          <h2 id="profile-view-title">Hồ Sơ Cá Nhân</h2>
+          <h2 id="profile-view-title">${t('profile_title')}</h2>
         </div>
 
         <div id="profile-content-mount">
           <div class="profile-loading-state">
             <div class="spinner"></div>
-            <p>Đang tải thông tin cá nhân...</p>
+            <p>${t('loading_profile')}</p>
           </div>
         </div>
       </div>
@@ -54,7 +55,7 @@ export const ProfileView = {
       mountPoint.innerHTML = `
         <div class="profile-loading-state">
           <div class="spinner"></div>
-          <p>Đang tải thông tin cá nhân...</p>
+          <p>${t('loading_profile')}</p>
         </div>
       `;
     }
@@ -89,20 +90,19 @@ export const ProfileView = {
           console.warn('Failed to load extendUser:', extendRes);
         }
 
-        const rolesRes = await api.get('roles');
-        if (rolesRes && rolesRes.success) {
-          this.roles = Array.isArray(rolesRes.data) ? rolesRes.data : [];
-        } else {
-          this.roles = [];
-          console.warn('Failed to load roles:', rolesRes);
+        // Check and load/refresh cached roles
+        await this.loadRoles(false);
+        const myRoleId = this.extendUser ? this.extendUser.roleId : null;
+        if (myRoleId && (!this.roles || !this.roles.find(r => String(r.roleId) === String(myRoleId)))) {
+          await this.loadRoles(true);
         }
 
         if (!this.profile) {
-          this.error = 'Không thể tải thông tin hồ sơ của bạn. Vui lòng kiểm tra lại kết nối mạng hoặc thử lại.';
+          this.error = t('profile_load_failed');
         }
       }
     } catch (err) {
-      this.error = err.message || 'Lỗi hệ thống khi tải dữ liệu.';
+      this.error = err.message || t('profile_load_error');
     } finally {
       this.loading = false;
     }
@@ -116,7 +116,7 @@ export const ProfileView = {
             <line x1="12" y1="16" x2="12.01" y2="16"></line>
           </svg>
           <p>${this.error}</p>
-          <button id="btn-retry-load" class="btn btn-primary" style="width: auto; margin-top: 15px;">Thử lại</button>
+          <button id="btn-retry-load" class="btn btn-primary" style="width: auto; margin-top: 15px;">${t('retry')}</button>
         </div>
       `;
       const retryBtn = document.getElementById('btn-retry-load');
@@ -132,7 +132,7 @@ export const ProfileView = {
 
     const titleEl = document.getElementById('profile-view-title');
     if (titleEl) {
-      titleEl.textContent = this.isEditing ? 'Chỉnh Sửa Hồ Sơ' : 'Hồ Sơ Cá Nhân';
+      titleEl.textContent = this.isEditing ? t('edit_profile_title') : t('profile_title');
     }
 
     // Process variables
@@ -149,8 +149,8 @@ export const ProfileView = {
 
     const defaultAvatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150';
     const avatarUrl = this.tempAvatarPreview || profile.avatarUrl || defaultAvatar;
-    const fullName = profile.fullName || 'Chưa cập nhật';
-    const username = profile.username ? `@${profile.username}` : '@chưa_có_username';
+    const fullName = profile.fullName || t('not_updated');
+    const username = profile.username ? `@${profile.username}` : `@${t('no_username')}`;
     const userId = profile.userId || extendUser.userId || 'N/A';
 
     const birthdayStr = this.formatDate(profile.birthday);
@@ -176,14 +176,14 @@ export const ProfileView = {
               <div class="profile-card-cover"></div>
               
               <!-- Editable Avatar -->
-              <div class="profile-avatar-container editable" id="avatar-edit-trigger" title="Thay đổi ảnh đại diện">
+              <div class="profile-avatar-container editable" id="avatar-edit-trigger" title="${t('change_avatar')}">
                 <img src="${avatarUrl}" class="profile-large-avatar" id="edit-avatar-preview" alt="${fullName}">
                 <div class="avatar-edit-overlay">
                   <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
                     <circle cx="12" cy="13" r="4"/>
                   </svg>
-                  <span>Thay ảnh</span>
+                  <span>${t('change_avatar_short')}</span>
                 </div>
                 <input type="file" id="profile-avatar-file-input" accept="image/*" style="display: none;">
               </div>
@@ -191,21 +191,21 @@ export const ProfileView = {
               <!-- Editable Names and controls -->
               <div class="profile-basic-details">
                 <div class="form-group" style="text-align: left; margin-bottom: 15px;">
-                  <label class="form-label" for="edit-fullname">Họ và tên</label>
-                  <input type="text" id="edit-fullname" class="form-input" value="${profile.fullName || ''}" placeholder="Ví dụ: Nguyễn Linh Chi" required>
+                  <label class="form-label" for="edit-fullname">${t('fullname_label')}</label>
+                  <input type="text" id="edit-fullname" class="form-input" value="${profile.fullName || ''}" placeholder="${t('fullname_placeholder')}" required>
                 </div>
                 
                 <div class="form-group" style="text-align: left; margin-bottom: 20px;">
-                  <label class="form-label" for="edit-username">Biệt danh (Username)</label>
-                  <input type="text" id="edit-username" class="form-input" value="${profile.username || ''}" placeholder="Ví dụ: linhchi_99" required>
+                  <label class="form-label" for="edit-username">${t('username_label')}</label>
+                  <input type="text" id="edit-username" class="form-input" value="${profile.username || ''}" placeholder="${t('nickname_placeholder')}" required>
                 </div>
                 
                 <div class="profile-edit-actions-row">
                   <button type="submit" class="btn btn-primary" style="width: auto; padding: 10px 24px; border-radius: 8px;">
-                    Lưu hồ sơ
+                    ${t('save_profile')}
                   </button>
                   <button type="button" id="btn-cancel-edit" class="btn btn-secondary" style="width: auto; padding: 10px 24px; border-radius: 8px;">
-                    Hủy bỏ
+                    ${t('cancel')}
                   </button>
                 </div>
               </div>
@@ -218,29 +218,29 @@ export const ProfileView = {
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                   <circle cx="12" cy="7" r="4"></circle>
                 </svg>
-                Chỉnh sửa thông tin cá nhân
+                ${t('edit_personal_info')}
               </h4>
               
               <div class="details-list-edit">
                 <div class="form-group" style="margin-bottom: 16px;">
-                  <label class="form-label" for="edit-birthday">Ngày sinh</label>
+                  <label class="form-label" for="edit-birthday">${t('dob_label')}</label>
                   <input type="date" id="edit-birthday" class="form-input" value="${profile.birthday || ''}" required>
                 </div>
 
                 <div class="form-group">
-                  <label class="form-label">Giới tính</label>
+                  <label class="form-label">${t('gender_label')}</label>
                   <div class="gender-selector">
                     <div class="gender-option">
                       <input type="radio" name="edit-gender" id="gender-male" value="MALE" ${profile.gender === 'MALE' ? 'checked' : ''}>
-                      <label for="gender-male" class="gender-label">Nam</label>
+                      <label for="gender-male" class="gender-label">${t('gender_male')}</label>
                     </div>
                     <div class="gender-option">
                       <input type="radio" name="edit-gender" id="gender-female" value="FEMALE" ${profile.gender === 'FEMALE' ? 'checked' : ''}>
-                      <label for="gender-female" class="gender-label">Nữ</label>
+                      <label for="gender-female" class="gender-label">${t('gender_female')}</label>
                     </div>
                     <div class="gender-option">
                       <input type="radio" name="edit-gender" id="gender-other" value="OTHER" ${profile.gender === 'OTHER' ? 'checked' : ''}>
-                      <label for="gender-other" class="gender-label">Khác</label>
+                      <label for="gender-other" class="gender-label">${t('gender_other')}</label>
                     </div>
                   </div>
                 </div>
@@ -254,25 +254,25 @@ export const ProfileView = {
                   <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
                   <polyline points="22,6 12,13 2,6"></polyline>
                 </svg>
-                Danh sách Email liên kết (${emails.length})
+                ${t('linked_emails_title')} (${emails.length})
               </h4>
               <div class="emails-list">
                 ${emails.length > 0
                   ? emails.map(email => {
                       const verifiedClass = email.verified ? 'verified-tag' : 'unverified-tag';
-                      const verifiedText = email.verified ? 'Đã xác minh' : 'Chưa xác minh';
+                      const verifiedText = email.verified ? t('email_verified') : t('email_unverified');
                       const dateStr = this.formatDate(email.createdAt);
                       return `
                         <div class="email-item">
                           <div class="email-info">
                             <span class="email-address">${email.emailName || 'N/A'}</span>
-                            <span class="email-created">Liên kết từ: ${dateStr}</span>
+                            <span class="email-created">${t('linked_from')} ${dateStr}</span>
                           </div>
                           <span class="email-status-badge ${verifiedClass}">${verifiedText}</span>
                         </div>
                       `;
                     }).join('')
-                  : `<div class="no-emails-placeholder"><p>Chưa có email nào được liên kết.</p></div>`
+                  : `<div class="no-emails-placeholder"><p>${t('no_linked_emails')}</p></div>`
                 }
               </div>
             </div>
@@ -284,14 +284,14 @@ export const ProfileView = {
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                   <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                 </svg>
-                Quyền hạn vai trò (${roleName})
+                ${t('role_permissions')} (${roleName})
               </h4>
               <div class="permissions-list-container">
                 ${permissions.length > 0 
                   ? `<div class="permissions-chips">
                       ${permissions.map(p => `<span class="perm-chip" title="${p.permissionName}">${p.permissionName}</span>`).join('')}
                      </div>`
-                  : `<div class="no-permissions-placeholder"><p>Không có quyền hạn cụ thể.</p></div>`
+                  : `<div class="no-permissions-placeholder"><p>${t('no_specific_permissions')}</p></div>`
                 }
               </div>
             </div>
@@ -323,7 +323,7 @@ export const ProfileView = {
                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                     <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"></path>
                   </svg>
-                  Chỉnh sửa hồ sơ
+                  ${t('edit_profile_title')}
                 </button>
               </div>
             </div>
@@ -336,19 +336,19 @@ export const ProfileView = {
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                 <circle cx="12" cy="7" r="4"></circle>
               </svg>
-              Thông tin cá nhân
+              ${t('personal_info')}
             </h4>
             <div class="details-list">
               <div class="detail-item">
-                <span class="detail-label">Ngày sinh:</span>
+                <span class="detail-label">${t('dob_label')}:</span>
                 <span class="detail-value">${birthdayStr}</span>
               </div>
               <div class="detail-item">
-                <span class="detail-label">Giới tính:</span>
+                <span class="detail-label">${t('gender_label')}:</span>
                 <span class="detail-value">${genderStr}</span>
               </div>
               <div class="detail-item">
-                <span class="detail-label">Lần cuối cập nhật:</span>
+                <span class="detail-label">${t('last_updated')}</span>
                 <span class="detail-value">${updatedAtStr}</span>
               </div>
             </div>
@@ -361,25 +361,25 @@ export const ProfileView = {
                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
                 <polyline points="22,6 12,13 2,6"></polyline>
               </svg>
-              Danh sách Email liên kết (${emails.length})
+              ${t('linked_emails_title')} (${emails.length})
             </h4>
             <div class="emails-list">
               ${emails.length > 0
                 ? emails.map(email => {
                     const verifiedClass = email.verified ? 'verified-tag' : 'unverified-tag';
-                    const verifiedText = email.verified ? 'Đã xác minh' : 'Chưa xác minh';
+                    const verifiedText = email.verified ? t('email_verified') : t('email_unverified');
                     const dateStr = this.formatDate(email.createdAt);
                     return `
                       <div class="email-item">
                         <div class="email-info">
                           <span class="email-address">${email.emailName || 'N/A'}</span>
-                          <span class="email-created">Liên kết từ: ${dateStr}</span>
+                          <span class="email-created">${t('linked_from')} ${dateStr}</span>
                         </div>
                         <span class="email-status-badge ${verifiedClass}">${verifiedText}</span>
                       </div>
                     `;
                   }).join('')
-                : `<div class="no-emails-placeholder"><p>Chưa có email nào được liên kết.</p></div>`
+                : `<div class="no-emails-placeholder"><p>${t('no_linked_emails')}</p></div>`
               }
             </div>
           </div>
@@ -391,14 +391,14 @@ export const ProfileView = {
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                 <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
               </svg>
-              Quyền hạn vai trò (${roleName})
+              ${t('role_permissions')} (${roleName})
             </h4>
             <div class="permissions-list-container">
               ${permissions.length > 0 
                 ? `<div class="permissions-chips">
                     ${permissions.map(p => `<span class="perm-chip" title="${p.permissionName}">${p.permissionName}</span>`).join('')}
                    </div>`
-                : `<div class="no-permissions-placeholder"><p>Không có quyền hạn cụ thể.</p></div>`
+                : `<div class="no-permissions-placeholder"><p>${t('no_specific_permissions')}</p></div>`
               }
             </div>
           </div>
@@ -478,7 +478,7 @@ export const ProfileView = {
     const loadingOverlay = document.getElementById('profile-loading');
     const loadingText = document.getElementById('profile-loading-text');
 
-    const toggleLoading = (isActive, msg = 'Đang xử lý...') => {
+    const toggleLoading = (isActive, msg = t('processing')) => {
       if (loadingText) loadingText.textContent = msg;
       if (loadingOverlay) {
         if (isActive) loadingOverlay.classList.add('active');
@@ -486,7 +486,7 @@ export const ProfileView = {
       }
     };
 
-    toggleLoading(true, 'Đang chuẩn bị cập nhật...');
+    toggleLoading(true, t('preparing_update'));
 
     let avatarUrl = this.profile.avatarUrl;
     let avatarId = this.profile.avatarId;
@@ -494,14 +494,14 @@ export const ProfileView = {
     try {
       // 1. Upload new image if chosen
       if (this.selectedAvatarFile) {
-        toggleLoading(true, 'Đang tải ảnh đại diện lên máy chủ...');
+        toggleLoading(true, t('uploading_avatar_msg'));
         const uploadResponse = await api.uploadImage(this.selectedAvatarFile, 'avatars');
         
         if (!uploadResponse.success) {
           toggleLoading(false);
           await showDialog({
-            title: 'Lỗi tải ảnh',
-            message: uploadResponse.message || 'Không thể tải ảnh đại diện lên máy chủ.',
+            title: t('upload_image_failed_title'),
+            message: uploadResponse.message || t('upload_avatar_failed_msg'),
             type: 'error'
           });
           return;
@@ -512,7 +512,7 @@ export const ProfileView = {
       }
 
       // 2. Put profile details
-      toggleLoading(true, 'Đang lưu thông tin cá nhân...');
+      toggleLoading(true, t('saving_profile'));
       
       const payload = {
         fullName: editFullname,
@@ -531,12 +531,15 @@ export const ProfileView = {
 
       if (!response.success) {
         await showDialog({
-          title: 'Lỗi cập nhật',
-          message: Array.isArray(response.data) ? response.data.join(', ') : (response.message || 'Không thể cập nhật hồ sơ.'),
+          title: t('update_error_title'),
+          message: Array.isArray(response.data) ? response.data.join(', ') : (response.message || t('profile_update_failed_msg')),
           type: 'error'
         });
         return;
       }
+
+      // Clear the cached short profile so it gets refreshed on next mount
+      sessionStorage.removeItem('chat_profile_short');
 
       // 3. Update local copy with the updated fields and toggle edit mode off
       if (this.profile) {
@@ -553,10 +556,10 @@ export const ProfileView = {
       this.tempAvatarPreview = null;
 
       await showDialog({
-        title: 'Cập nhật thành công',
-        message: 'Thông tin cá nhân của bạn đã được thay đổi thành công.',
+        title: t('update_success_title'),
+        message: t('profile_update_success_msg'),
         type: 'success',
-        buttons: [{ text: 'Đồng ý', type: 'primary', value: true }]
+        buttons: [{ text: t('ok'), type: 'primary', value: true }]
       });
 
       // Refresh view locally
@@ -566,30 +569,57 @@ export const ProfileView = {
       toggleLoading(false);
       console.error(err);
       await showDialog({
-        title: 'Lỗi hệ thống',
-        message: err.message || 'Có lỗi hệ thống xảy ra khi lưu thông tin.',
+        title: t('system_error_title'),
+        message: err.message || t('profile_save_system_error'),
         type: 'error'
       });
     }
   },
 
+  async loadRoles(forceRefresh = false) {
+    if (!forceRefresh) {
+      const cachedRoles = sessionStorage.getItem('chat_roles_cache');
+      if (cachedRoles) {
+        try {
+          this.roles = JSON.parse(cachedRoles);
+          return;
+        } catch (e) {
+          console.warn('Failed to parse cached roles:', e);
+          sessionStorage.removeItem('chat_roles_cache');
+        }
+      }
+    }
+
+    try {
+      const res = await api.get('roles');
+      if (res && res.success && Array.isArray(res.data)) {
+        this.roles = res.data;
+        sessionStorage.setItem('chat_roles_cache', JSON.stringify(res.data));
+      }
+    } catch (err) {
+      console.error('Failed to load system roles:', err);
+    }
+  },
+
   formatDate(dateStr) {
-    if (!dateStr) return 'Chưa cập nhật';
+    if (!dateStr) return t('not_updated');
     try {
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return dateStr;
-      return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      const lang = localStorage.getItem('chat_lang') || 'vi';
+      return d.toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-US', { day: '2-digit', month: '2-digit', year: 'numeric' });
     } catch (e) {
       return dateStr;
     }
   },
 
   formatDateTime(instantStr) {
-    if (!instantStr) return 'Chưa cập nhật';
+    if (!instantStr) return t('not_updated');
     try {
       const d = new Date(instantStr);
       if (isNaN(d.getTime())) return instantStr;
-      return d.toLocaleString('vi-VN', {
+      const lang = localStorage.getItem('chat_lang') || 'vi';
+      return d.toLocaleString(lang === 'vi' ? 'vi-VN' : 'en-US', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
@@ -602,23 +632,23 @@ export const ProfileView = {
   },
 
   formatGender(gender) {
-    if (!gender) return 'Chưa cập nhật';
+    if (!gender) return t('not_updated');
     const mapping = {
-      MALE: 'Nam',
-      FEMALE: 'Nữ',
-      OTHER: 'Khác'
+      MALE: t('gender_male'),
+      FEMALE: t('gender_female'),
+      OTHER: t('gender_other')
     };
     return mapping[String(gender).toUpperCase()] || gender;
   },
 
   formatStatus(status) {
-    if (!status) return 'Chưa xác thực';
+    if (!status) return t('status_unverified_tag');
     const mapping = {
-      ACTIVE: 'Đang hoạt động',
-      INACTIVE:'CHờ xác thực tài khoản',
-      LOCKED: 'Đã khóa',
-      BANNED: 'Đã bị cấm',
-      PENDING: 'Đang chờ duyệt'
+      ACTIVE: t('status_active'),
+      INACTIVE: t('status_waiting_verification'),
+      LOCKED: t('status_locked'),
+      BANNED: t('status_banned'),
+      PENDING: t('status_pending')
     };
     return mapping[String(status).toUpperCase()] || status;
   }

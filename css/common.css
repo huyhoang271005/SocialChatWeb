@@ -227,6 +227,62 @@ body::after {
   transform: none !important;
 }
 
+/* Shared Badges and Tags system */
+.role-badge,
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+/* Role badge colors */
+.role-admin {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.role-superadmin {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border-color: rgba(168, 85, 247, 0.3);
+}
+
+.role-user,
+.role-customer {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+/* Status badge colors */
+.status-active {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.status-locked,
+.status-pending {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.status-banned {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
 .auth-links {
   display: flex;
   justify-content: space-between;
@@ -312,4 +368,331 @@ body::after {
     gap: 10px;
   }
 }
+
+/* Light Theme styles & Unified Module Overrides */
+body.light-theme {
+  --bg-primary: hsl(230, 30%, 96%);
+  --bg-secondary: hsl(230, 25%, 90%);
+  --bg-card: hsla(230, 25%, 100%, 0.85);
+  --border-color: hsla(230, 15%, 10%, 0.08);
+  --border-focus: hsla(217, 90%, 60%, 0.4);
+  
+  --text-primary: hsl(230, 25%, 12%);
+  --text-secondary: hsl(230, 15%, 35%);
+  --text-muted: hsl(230, 10%, 55%);
+  
+  --accent-color: hsl(217, 90%, 55%);
+  --accent-gradient: linear-gradient(135deg, hsl(215, 90%, 50%) 0%, hsl(265, 80%, 55%) 100%);
+  --accent-glow: hsla(217, 90%, 55%, 0.15);
+  
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+body.light-theme::before, 
+body.light-theme::after {
+  opacity: 0.12;
+}
+
+body.light-theme .auth-container,
+body.light-theme .user-detail-card-header,
+body.light-theme .role-card {
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.06) !important;
+  background: var(--bg-card) !important;
+}
+
+body.light-theme .chat-dashboard,
+body.light-theme .users-dashboard,
+body.light-theme .roles-dashboard,
+body.light-theme .sessions-dashboard,
+body.light-theme .profile-dashboard {
+  background: var(--bg-card) !important;
+  box-shadow: none !important;
+}
+
+body.light-theme .system-message-content {
+  background-color: hsla(230, 20%, 90%, 0.6) !important;
+  color: var(--text-secondary) !important;
+  border-color: var(--border-color) !important;
+}
+
+body.light-theme .form-input,
+body.light-theme input[type="text"],
+body.light-theme input[type="email"],
+body.light-theme input[type="password"],
+body.light-theme textarea,
+body.light-theme select {
+  background-color: hsla(230, 25%, 100%, 0.7) !important;
+  color: var(--text-primary) !important;
+}
+
+body.light-theme .form-input:focus,
+body.light-theme input:focus,
+body.light-theme textarea:focus,
+body.light-theme select:focus {
+  background-color: hsl(0, 0%, 100%) !important;
+}
+
+body.light-theme .btn-secondary {
+  background-color: hsla(230, 25%, 100%, 0.6) !important;
+  color: var(--text-primary) !important;
+}
+
+body.light-theme .btn-secondary:hover {
+  background-color: hsla(230, 25%, 100%, 0.95) !important;
+}
+
+body.light-theme .loading-overlay {
+  background-color: rgba(255, 255, 255, 0.85);
+}
+
+body.light-theme .dialog-card {
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+}
+
+/* Profile Module Light Theme overrides */
+body.light-theme .profile-user-id {
+  background: hsla(230, 25%, 100%, 0.6) !important;
+  color: var(--text-muted) !important;
+}
+body.light-theme .profile-user-id code {
+  color: var(--text-primary) !important;
+}
+body.light-theme .profile-card {
+  background: hsla(230, 25%, 100%, 0.5) !important;
+  box-shadow: none !important;
+}
+body.light-theme .detail-item,
+body.light-theme .email-item,
+body.light-theme .gender-label,
+body.light-theme .perm-chip {
+  background: hsla(230, 25%, 100%, 0.6) !important;
+  color: var(--text-primary) !important;
+}
+body.light-theme .email-item:hover {
+  background: hsla(230, 25%, 100%, 0.9) !important;
+}
+body.light-theme .gender-option input:checked + .gender-label {
+  background-color: hsla(217, 90%, 55%, 0.15) !important;
+  color: var(--accent-color) !important;
+  border-color: var(--accent-color) !important;
+}
+body.light-theme input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.2);
+}
+
+/* Chat Module Light Theme overrides */
+body.light-theme .chat-sidebar {
+  background-color: hsla(230, 25%, 100%, 0.3) !important;
+}
+body.light-theme .conversation-item:hover,
+body.light-theme .conversation-item.active {
+  background-color: hsla(230, 25%, 100%, 0.65) !important;
+}
+body.light-theme .message-incoming {
+  background-color: hsla(230, 20%, 85%, 0.55) !important;
+  color: var(--text-primary) !important;
+}
+body.light-theme .chat-footer-btn {
+  background: hsla(230, 25%, 100%, 0.7) !important;
+}
+body.light-theme .chat-footer-btn:hover {
+  background: hsla(230, 25%, 100%, 0.95) !important;
+}
+body.light-theme #typing-indicator,
+body.light-theme #voice-preview-container,
+body.light-theme .voice-preview-container,
+body.light-theme .reply-preview-container {
+  background-color: hsla(230, 25%, 100%, 0.75) !important;
+}
+body.light-theme .staged-files-container {
+  background-color: hsla(230, 20%, 90%, 0.5) !important;
+}
+
+/* Users Module Light Theme overrides */
+body.light-theme .user-list-card,
+body.light-theme .user-detail-pane,
+body.light-theme .pane-email-item,
+body.light-theme .selected-user-item,
+body.light-theme .member-list-item,
+body.light-theme .admin-action-pane,
+body.light-theme .users-section {
+  background: hsla(230, 25%, 100%, 0.5) !important;
+  box-shadow: none !important;
+}
+body.light-theme .user-list-card:hover {
+  background: hsla(230, 25%, 100%, 0.8) !important;
+}
+body.light-theme .user-list-card.active {
+  background: hsla(217, 90%, 55%, 0.08) !important;
+}
+body.light-theme .user-detail-card-header {
+  background: hsla(230, 25%, 100%, 0.65) !important;
+  border-color: var(--border-color) !important;
+}
+body.light-theme .pane-detail-value code {
+  background-color: hsla(230, 25%, 92%, 0.7) !important;
+  color: hsl(230, 25%, 12%) !important;
+  border: 1px solid hsla(230, 15%, 10%, 0.1) !important;
+}
+body.light-theme input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.2) !important;
+}
+
+/* Sessions Module Light Theme overrides */
+body.light-theme .session-item,
+body.light-theme .session-card,
+body.light-theme .session-details-modal,
+body.light-theme .verification-row,
+body.light-theme .verifications-loading-state,
+body.light-theme .verifications-error-state,
+body.light-theme .verifications-empty-state {
+  background: hsla(230, 25%, 100%, 0.5) !important;
+  box-shadow: none !important;
+}
+body.light-theme .session-card:hover,
+body.light-theme .verification-row:hover {
+  background: hsla(230, 25%, 100%, 0.8) !important;
+}
+body.light-theme .device-icon-container,
+body.light-theme .verification-type-icon,
+body.light-theme .btn-action-logout,
+body.light-theme .btn-action-delete,
+body.light-theme .btn-action-verify-history {
+  background: hsla(230, 25%, 100%, 0.6) !important;
+}
+body.light-theme .session-card.current-session .device-icon-container {
+  background: hsla(217, 90%, 55%, 0.12) !important;
+}
+
+/* Roles Module Light Theme overrides */
+body.light-theme .role-card,
+body.light-theme .roles-section,
+body.light-theme .permission-section,
+body.light-theme .permissions-select-grid,
+body.light-theme .permission-checkbox-label {
+  background: hsla(230, 25%, 100%, 0.5) !important;
+  box-shadow: none !important;
+}
+body.light-theme .permission-checkbox-label:hover {
+  background: hsla(230, 25%, 100%, 0.8) !important;
+}
+body.light-theme .permission-tag {
+  background: rgba(37, 99, 235, 0.08) !important;
+  color: hsl(217, 85%, 45%) !important;
+  border-color: rgba(37, 99, 235, 0.2) !important;
+}
+body.light-theme .role-card.deleted {
+  background: hsla(230, 25%, 100%, 0.3) !important;
+  border-color: rgba(220, 38, 38, 0.25) !important;
+}
+body.light-theme .btn-icon:hover {
+  background: hsla(230, 25%, 100%, 0.9) !important;
+}
+
+/* Global Role & Status Badge Overrides for Light Theme */
+body.light-theme .role-admin,
+body.light-theme .status-banned,
+body.light-theme .badge-revoked,
+body.light-theme .deleted-role-badge,
+body.light-theme .v-failed,
+body.light-theme .v-expired {
+  background: rgba(220, 38, 38, 0.08) !important;
+  color: hsl(350, 75%, 42%) !important;
+  border-color: rgba(220, 38, 38, 0.2) !important;
+}
+body.light-theme .role-superadmin {
+  background: rgba(124, 58, 237, 0.08) !important;
+  color: hsl(270, 75%, 45%) !important;
+  border-color: rgba(124, 58, 237, 0.2) !important;
+}
+body.light-theme .role-user,
+body.light-theme .role-customer,
+body.light-theme .badge-validated {
+  background: rgba(37, 99, 235, 0.08) !important;
+  color: hsl(217, 85%, 45%) !important;
+  border-color: rgba(37, 99, 235, 0.2) !important;
+}
+body.light-theme .status-active,
+body.light-theme .verified-tag,
+body.light-theme .badge-active,
+body.light-theme .v-success,
+body.light-theme .v-used {
+  background: rgba(5, 150, 105, 0.08) !important;
+  color: hsl(142, 75%, 33%) !important;
+  border-color: rgba(5, 150, 105, 0.2) !important;
+}
+body.light-theme .status-locked,
+body.light-theme .status-pending,
+body.light-theme .unverified-tag,
+body.light-theme .v-pending {
+  background: rgba(217, 119, 6, 0.08) !important;
+  color: hsl(35, 80%, 35%) !important;
+  border-color: rgba(217, 119, 6, 0.2) !important;
+}
+body.light-theme .v-cancelled {
+  background: rgba(107, 114, 128, 0.1) !important;
+  color: hsl(220, 10%, 40%) !important;
+  border-color: rgba(107, 114, 128, 0.2) !important;
+}
+
+/* Light Theme Dialog & Overlay overrides */
+body.light-theme .dialog-card {
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.08) !important;
+  border-color: var(--border-color) !important;
+}
+body.light-theme .dialog-body {
+  color: var(--text-secondary) !important;
+}
+body.light-theme .dialog-overlay {
+  background-color: rgba(255, 255, 255, 0.5) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+}
+
+/* Light Theme Loading overlays & Spinner overrides */
+body.light-theme .loading-overlay {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+body.light-theme .loading-text {
+  color: var(--text-primary) !important;
+}
+body.light-theme .spinner,
+body.light-theme .spinner-sm {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  border-top-color: var(--accent-color) !important;
+}
+
+/* Light Theme Nested/Section Loading, Error and Placeholder States overrides */
+body.light-theme .sessions-loading-state,
+body.light-theme .sessions-error-state,
+body.light-theme .sessions-empty-state,
+body.light-theme .profile-loading-state,
+body.light-theme .profile-error-state,
+body.light-theme .details-loading-state,
+body.light-theme .details-placeholder-state,
+body.light-theme .details-error-state {
+  background-color: hsla(230, 25%, 100%, 0.5) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+  box-shadow: none !important;
+}
+
+body.light-theme .sessions-loading-state p,
+body.light-theme .sessions-error-state p,
+body.light-theme .sessions-empty-state p,
+body.light-theme .profile-loading-state p,
+body.light-theme .profile-error-state p,
+body.light-theme .details-loading-state p,
+body.light-theme .details-placeholder-state p,
+body.light-theme .details-error-state p {
+  color: var(--text-secondary) !important;
+}
+
+
+
 

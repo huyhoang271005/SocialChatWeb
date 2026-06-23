@@ -1,6 +1,7 @@
 import { Step1 } from './step1.js';
 import { Step2 } from './step2.js';
 import { Step3 } from './step3.js';
+import { t } from '../../../js/core/i18n.js';
 
 export const RegisterView = {
   // Shared state across registration sub-views
@@ -16,12 +17,12 @@ export const RegisterView = {
         <!-- Loading Overlay -->
         <div class="loading-overlay" id="register-loading">
           <div class="spinner"></div>
-          <div class="loading-text" id="register-loading-text">Đang xử lý...</div>
+          <div class="loading-text" id="register-loading-text">${t('processing')}</div>
         </div>
 
         <div class="auth-header">
-          <h1>Tạo Tài Khoản</h1>
-          <p>Tham gia cộng đồng ChatApp ngay hôm nay</p>
+          <h1>${t('create_account_title')}</h1>
+          <p>${t('create_account_subtitle')}</p>
         </div>
 
         <!-- Stepper Nodes Progress Line -->
@@ -58,7 +59,7 @@ export const RegisterView = {
     const loading = document.getElementById('register-loading');
     const loadingText = document.getElementById('register-loading-text');
 
-    const toggleLoading = (isActive, message = 'Đang xử lý...') => {
+    const toggleLoading = (isActive, message = t('processing')) => {
       loadingText.textContent = message;
       if (isActive) {
         loading.classList.add('active');
