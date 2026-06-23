@@ -32,6 +32,7 @@ export const HomeView = {
   stagedFiles: [],
   recordingTimerInterval: null,
   isRecordingCanceled: false,
+  wasDisconnected: false,
 
   render() {
     const userEmail = localStorage.getItem('chat_user_email') || 'user@example.com';
@@ -196,6 +197,7 @@ export const HomeView = {
 
   async init(router, queryParams) {
     this.router = router;
+    this.wasDisconnected = !navigator.onLine;
     const messageInput = document.getElementById('message-input');
     const sendBtn = document.getElementById('btn-send-message');
 
@@ -520,9 +522,25 @@ export const HomeView = {
     // Initialize status text
     updateConnectionStatus(navigator.onLine);
 
+    const clearSessionCaches = () => {
+      sessionStorage.removeItem('chat_conversations_cache');
+      for (let i = sessionStorage.length - 1; i >= 0; i--) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith('chat_messages_cache_')) {
+          sessionStorage.removeItem(key);
+        }
+      }
+    };
+
     socket.onConnectCallback = () => {
       updateConnectionStatus(true);
       OfflineQueueHandler.processOfflineQueue(this);
+
+      if (this.wasDisconnected) {
+        clearSessionCaches();
+        this.wasDisconnected = false;
+      }
+
       // Refresh conversations list on connect/reconnect
       this.loadConversations(false, null, false, true);
       // Tải lại tin nhắn mới nhất để đồng bộ sau khi kết nối
@@ -532,6 +550,7 @@ export const HomeView = {
     };
     socket.onDisconnectCallback = () => {
       updateConnectionStatus(false);
+      this.wasDisconnected = true;
     };
 
     this.syncIntervalId = setInterval(() => OfflineQueueHandler.processOfflineQueue(this), 4000);
@@ -539,6 +558,12 @@ export const HomeView = {
     this.handleOnlineStatus = () => {
       updateConnectionStatus(true);
       OfflineQueueHandler.processOfflineQueue(this);
+
+      if (this.wasDisconnected) {
+        clearSessionCaches();
+        this.wasDisconnected = false;
+      }
+
       // Refresh conversations list on connect/reconnect
       this.loadConversations(false, null, false, true);
       // Tải lại tin nhắn mới nhất để đồng bộ sau khi kết nối lại
@@ -548,6 +573,7 @@ export const HomeView = {
     };
     this.handleOfflineStatus = () => {
       updateConnectionStatus(false);
+      this.wasDisconnected = true;
     };
 
     window.addEventListener('online', this.handleOnlineStatus);

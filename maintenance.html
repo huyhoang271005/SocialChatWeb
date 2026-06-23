@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống đang bảo trì - Maintenance Mode</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(17, 24, 39, 0.7);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --primary-glow: rgba(59, 130, 246, 0.15);
+            --secondary-glow: rgba(139, 92, 246, 0.15);
+            --accent-color: #f59e0b;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            --button-hover-gradient: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Glowing Background Blobs */
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: 1;
+        }
+
+        .blob-1 {
+            width: 400px;
+            height: 400px;
+            background: var(--primary-glow);
+            top: -100px;
+            left: -100px;
+            animation: float 20s infinite alternate;
+        }
+
+        .blob-2 {
+            width: 500px;
+            height: 500px;
+            background: var(--secondary-glow);
+            bottom: -150px;
+            right: -150px;
+            animation: float 25s infinite alternate-reverse;
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(50px, 30px) scale(1.1); }
+        }
+
+        /* Main Container */
+        .container {
+            width: 100%;
+            max-width: 550px;
+            padding: 20px;
+            z-index: 2;
+            text-align: center;
+        }
+
+        /* Glassmorphic Card */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 40px 30px;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* SVG Animation */
+        .illustration {
+            width: 160px;
+            height: 160px;
+            margin: 0 auto 30px;
+        }
+
+        .gear {
+            transform-origin: center;
+            animation: rotate 12s linear infinite;
+        }
+
+        .gear-reverse {
+            transform-origin: center;
+            animation: rotate-reverse 8s linear infinite;
+        }
+
+        .pulse-light {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes rotate-reverse {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(-360deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.8)); }
+        }
+
+        /* Typography */
+        h1 {
+            font-size: 1.85rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #fff 0%, #d1d5db 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--accent-color);
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+        }
+
+        .desc {
+            font-size: 1rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .desc-en {
+            font-size: 0.9rem;
+            color: rgba(156, 163, 175, 0.7);
+            line-height: 1.5;
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+
+        /* Interactive Reload Button */
+        .btn-reload {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background: var(--accent-gradient);
+            color: #fff;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+            text-decoration: none;
+            width: 100%;
+            max-width: 250px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-reload::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: 0.5s;
+        }
+
+        .btn-reload:hover::before {
+            left: 100%;
+        }
+
+        .btn-reload:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+            background: var(--button-hover-gradient);
+        }
+
+        .btn-reload:active {
+            transform: translateY(1px);
+        }
+
+        .btn-icon {
+            width: 18px;
+            height: 18px;
+            transition: transform 0.5s ease;
+        }
+
+        .btn-reload:hover .btn-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Countdown Indicator */
+        .countdown-container {
+            margin-top: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: rgba(156, 163, 175, 0.6);
+        }
+
+        .progress-bar-bg {
+            width: 120px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 100%;
+            background: var(--accent-gradient);
+            transform-origin: left;
+            animation: shrink 30s linear infinite;
+        }
+
+        @keyframes shrink {
+            from { transform: scaleX(1); }
+            to { transform: scaleX(0); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Background Glows -->
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
+    <div class="container">
+        <div class="card">
+            <!-- Animated Maintenance Icon -->
+            <div class="illustration">
+                <svg viewBox="0 0 100 100" width="100%" height="100%" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Outer pulsing ring -->
+                    <circle cx="50" cy="50" r="45" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="6 6" class="pulse-light" />
+                    
+                    <!-- Server Base -->
+                    <rect x="25" y="60" width="50" height="22" rx="4" fill="#1f2937" stroke="#3b82f6" stroke-width="2" />
+                    <line x1="33" y1="71" x2="37" y2="71" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" class="pulse-light" />
+                    <line x1="43" y1="71" x2="57" y2="71" stroke="#4b5563" stroke-width="2" stroke-linecap="round" />
+                    <circle cx="70" cy="71" r="2" fill="#10b981" class="pulse-light" />
+
+                    <!-- Gear Big -->
+                    <g class="gear">
+                        <circle cx="50" cy="40" r="14" stroke="#8b5cf6" stroke-width="2" fill="#111827" />
+                        <!-- Teeth -->
+                        <path d="M50 22v6M50 52v6M32 40h6M62 40h6M37.3 27.3l4.2 4.2M58.5 48.5l4.2 4.2M37.3 52.7l4.2-4.2M58.5 31.5l4.2-4.2" stroke="#8b5cf6" stroke-width="3.5" stroke-linecap="round" />
+                        <circle cx="50" cy="40" r="5" fill="#1f2937" stroke="#8b5cf6" stroke-width="2" />
+                    </g>
+
+                    <!-- Gear Small -->
+                    <g class="gear-reverse">
+                        <circle cx="68" cy="48" r="9" stroke="#3b82f6" stroke-width="2" fill="#111827" />
+                        <!-- Teeth -->
+                        <path d="M68 36v4M68 56v4M56 48h4M76 48h4" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" />
+                        <circle cx="68" cy="48" r="3.5" fill="#1f2937" stroke="#3b82f6" stroke-width="1.5" />
+                    </g>
+                </svg>
+            </div>
+
+            <div class="subtitle">BẢO TRÌ HỆ THỐNG</div>
+            <h1>Hệ thống đang được nâng cấp</h1>
+            <p class="desc">Chúng tôi đang tiến hành bảo trì định kỳ để nâng cấp hiệu năng và bổ sung các tính năng mới. Vui lòng quay lại sau ít phút.</p>
+            <p class="desc-en">We are currently undergoing scheduled maintenance to improve system performance. Please check back shortly.</p>
+
+            <button onclick="handleReload()" class="btn-reload">
+                <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18.5" />
+                </svg>
+                <span>Thử lại / Retry</span>
+            </button>
+
+            <div class="countdown-container">
+                <span>Tự động tải lại sau</span>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="progress-fill"></div>
+                </div>
+                <span id="countdown-text">30s</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function handleReload() {
+            // Force reload and go back to root path to check status
+            window.location.href = "/";
+        }
+
+        // Auto reload countdown timer
+        let timeLeft = 30;
+        const countdownText = document.getElementById('countdown-text');
+
+        setInterval(() => {
+            timeLeft--;
+            if (timeLeft <= 0) {
+                timeLeft = 30;
+                // Trigger reload check
+                window.location.href = "/";
+            }
+            countdownText.textContent = timeLeft + 's';
+        }, 1000);
+    </script>
+</body>
+</html>
