@@ -406,7 +406,8 @@ export function handleSocketEvent(ctx, event) {
                   senderName,
                   isRevoked ? t('revoked_msg') : messageText,
                   incomingConvoId,
-                  messageDto.messageId || messageDto.id
+                  messageDto.messageId || messageDto.id,
+                  messageDto.tag || event.tag
                 );
               })
               .catch(err => console.warn('Không thể tải showNativeNotification từ firebase.js:', err));
@@ -514,6 +515,13 @@ export function handleSocketEvent(ctx, event) {
           convo.lastMessageText = t('revoked_msg');
           ctx.renderConversationsList();
         }
+
+        // Thu hồi thông báo native hiển thị (nếu có)
+        import('../../../../js/core/firebase.js')
+          .then(({ revokeNativeNotification }) => {
+            revokeNativeNotification(targetMsgId);
+          })
+          .catch(err => console.warn('Không thể tải revokeNativeNotification từ firebase.js:', err));
       }
       break;
 

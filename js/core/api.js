@@ -1,5 +1,5 @@
 import { CONFIG } from './config.js';
-import { getLanguage } from './i18n.js';
+import { getLanguage, t } from './i18n.js';
 
 
 function handleApiResponse(responseJson) {
@@ -75,7 +75,7 @@ export async function refreshAccessToken() {
       sessionStorage.clear();
 
       const serverMsg = body && body.message ? formatDateTimeInText(body.message) : null;
-      const displayMsg = serverMsg || 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.';
+      const displayMsg = serverMsg || t('api_session_expired_desc');
 
       const errorResult = {
         success: false,
@@ -85,10 +85,10 @@ export async function refreshAccessToken() {
 
       // Show dialog and wait for user to click OK before redirecting
       await showDialog({
-        title: 'Phiên đăng nhập hết hạn',
+        title: t('api_session_expired_title'),
         message: displayMsg,
         type: 'warning',
-        buttons: [{ text: 'Đồng ý', type: 'primary', value: true }]
+        buttons: [{ text: t('ok'), type: 'primary', value: true }]
       });
 
       window.location.hash = '#login';
@@ -106,7 +106,7 @@ export async function refreshAccessToken() {
 
     if (!res.ok || !body || !body.success) {
       const serverMsg = body && body.message ? formatDateTimeInText(body.message) : null;
-      const displayMsg = serverMsg || 'Lỗi khi làm mới phiên đăng nhập';
+      const displayMsg = serverMsg || t('api_refresh_failed');
 
       const errorResult = {
         success: false,
@@ -115,7 +115,7 @@ export async function refreshAccessToken() {
       };
 
       await showDialog({
-        title: 'Lỗi phiên đăng nhập',
+        title: t('api_session_error'),
         message: displayMsg,
         type: 'error'
       });
@@ -149,14 +149,14 @@ export async function refreshAccessToken() {
   } catch (error) {
     const errorResult = {
       success: false,
-      message: error.message || 'Lỗi kết nối máy chủ khi làm mới phiên',
+      message: error.message || t('api_connection_error_refresh'),
       data: null
     };
 
     try {
       const { showDialog } = await import('../shared/dialog/dialog.js');
       await showDialog({
-        title: 'Lỗi kết nối',
+        title: t('api_connection_error_title'),
         message: errorResult.message,
         type: 'error'
       });
@@ -246,10 +246,10 @@ async function request(endpoint, options = {}, alreadyRefreshed = false) {
         window._isShowing403Dialog = true;
 
         showDialog({
-          title: 'Không có quyền',
-          message: 'Bạn không có quyền thực hiện hành động này hoặc truy cập trang này.',
+          title: t('api_forbidden_title'),
+          message: t('api_forbidden_desc'),
           type: 'error',
-          buttons: [{ text: 'Đồng ý', type: 'primary', value: true }]
+          buttons: [{ text: t('ok'), type: 'primary', value: true }]
         }).then(() => {
           window._isShowing403Dialog = false;
           if (isPagesWithAccessControl) {
@@ -279,7 +279,7 @@ async function request(endpoint, options = {}, alreadyRefreshed = false) {
     console.error(err);
     return {
       success: false,
-      message: "Lỗi kết nối đến server",
+      message: t('api_server_connection_failed'),
       data: null
     };
   }
@@ -298,7 +298,7 @@ export const api = {
     if (!file) {
       return {
         success: false,
-        message: 'File không hợp lệ',
+        message: t('api_invalid_file'),
         data: null
       };
     }
@@ -317,7 +317,7 @@ export const api = {
       if (!sigResponse || !sigResponse.success) {
         return {
           success: false,
-          message: sigResponse?.message || 'Không lấy được chữ ký tải ảnh từ hệ thống',
+          message: sigResponse?.message || t('api_image_signature_failed'),
           data: null
         };
       }
@@ -326,7 +326,7 @@ export const api = {
       if (!signatureData) {
         return {
           success: false,
-          message: 'Không lấy được chữ ký tải ảnh từ hệ thống',
+          message: t('api_image_signature_failed'),
           data: null
         };
       }
@@ -361,7 +361,7 @@ export const api = {
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        throw new Error(errData?.error?.message || `Lỗi từ Cloudinary (HTTP ${response.status})`);
+        throw new Error(errData?.error?.message || `${t('api_cloudinary_error')} (HTTP ${response.status})`);
       }
 
       const cloudinaryResult = await response.json();
@@ -380,7 +380,7 @@ export const api = {
     } catch (error) {
       return {
         success: false,
-        message: error.message || 'Không thể tải ảnh lên',
+        message: error.message || t('api_image_upload_failed'),
         data: null
       };
     }
@@ -390,7 +390,7 @@ export const api = {
     if (!file) {
       return {
         success: false,
-        message: 'File không hợp lệ',
+        message: t('api_invalid_file'),
         data: null
       };
     }
@@ -408,7 +408,7 @@ export const api = {
       if (!sigResponse || !sigResponse.success) {
         return {
           success: false,
-          message: sigResponse?.message || 'Không lấy được chữ ký tải tệp từ hệ thống',
+          message: sigResponse?.message || t('api_file_signature_failed'),
           data: null
         };
       }
@@ -417,7 +417,7 @@ export const api = {
       if (!signatureData) {
         return {
           success: false,
-          message: 'Không lấy được chữ ký tải tệp từ hệ thống',
+          message: t('api_file_signature_failed'),
           data: null
         };
       }
@@ -451,7 +451,7 @@ export const api = {
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        throw new Error(errData?.error?.message || `Lỗi từ Cloudinary (HTTP ${response.status})`);
+        throw new Error(errData?.error?.message || `${t('api_cloudinary_error')} (HTTP ${response.status})`);
       }
 
       const cloudinaryResult = await response.json();
@@ -469,7 +469,7 @@ export const api = {
     } catch (error) {
       return {
         success: false,
-        message: error.message || 'Không thể tải tệp tin lên',
+        message: error.message || t('api_file_upload_failed'),
         data: null
       };
     }

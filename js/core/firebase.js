@@ -73,6 +73,13 @@ export async function getFCMToken() {
       type: 'module'
     });
 
+    try {
+      // Ép buộc trình duyệt cập nhật Service Worker mới nhất ngay lập tức
+      await registration.update();
+    } catch (e) {
+      console.warn('Không thể ép buộc cập nhật Service Worker:', e);
+    }
+
     const messaging = getMessaging(app);
     const fcmToken = await getToken(messaging, {
       serviceWorkerRegistration: registration,
@@ -146,33 +153,135 @@ export function getCurrentFirebaseToken() {
  * @param {string} body Nội dung thông báo
  * @param {string} conversationId ID cuộc trò chuyện để điều hướng khi click
  * @param {string} messageId ID tin nhắn (làm tag để tránh trùng lặp)
+ * @param {string} tag Tag tùy chỉnh để gom nhóm
  */
-export function showNativeNotification(title, body, conversationId, messageId) {
+export async function showNativeNotification(title, body, conversationId, messageId, tag) {
   if (Notification.permission !== 'granted') {
     return;
   }
 
-  const tag = messageId || `msg-${Date.now()}`;
-  const options = {
-    body: body,
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
-    tag: tag,
-    data: {
-      click_action: `${window.location.origin}/#home?conversationId=${conversationId}`
-    }
-  };
+  // Ưu tiên sử dụng tag gom nhóm từ server/FCM, sau đó mới dùng conversationId
+  const groupTag = tag || (conversationId ? `convo-${conversationId}` : (messageId || `msg-${Date.now()}`));
+  const clickAction = `${window.location.origin}/#home?conversationId=${conversationId}`;
 
   if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
-    navigator.serviceWorker.ready.then((registration) => {
-      registration.showNotification(title, options);
-    });
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      let messages = [];
+      try {
+        // Lấy tất cả thông báo hiện có và tìm kiếm theo tag để tăng độ tương thích trên thiết bị di động
+        const activeNotifications = await registration.getNotifications();
+        const oldNotification = activeNotifications.find(n => n.tag === groupTag);
+        if (oldNotification) {
+          if (oldNotification.data && Array.isArray(oldNotification.data.messages)) {
+            messages = [...oldNotification.data.messages];
+          }
+          // Đóng thông báo cũ để thông báo mới lướt ra (pop up) trên màn hình
+          oldNotification.close();
+        }
+      } catch (e) {
+        console.error('Lỗi khi lấy thông báo cũ (foreground):', e);
+      }
+
+      // Thêm tin nhắn mới vào danh sách nhóm
+      messages.push({
+        messageId: messageId,
+        body: body,
+        title: title
+      });
+
+      const count = messages.length;
+      // Tạo tiêu đề kèm số lượng nếu có từ 2 tin nhắn trở lên
+      const finalTitle = count > 1 ? `${title} (${count})` : title;
+
+      // Tạo nội dung hiển thị (tối đa 3 tin nhắn gần nhất)
+      let finalBody = body;
+      if (count > 1) {
+        const recentMessages = messages.slice(-3);
+        finalBody = recentMessages.map(m => m.body).join('\n');
+      }
+
+      const options = {
+        body: finalBody,
+        icon: '/favicon.ico',
+        badge: '/favicon.ico',
+        tag: groupTag,
+        data: {
+          click_action: clickAction,
+          messages: messages
+        }
+      };
+
+      registration.showNotification(finalTitle, options);
+    } catch (err) {
+      console.error('Lỗi khi hiển thị thông báo qua Service Worker:', err);
+    }
   } else {
+    // Fallback khi không hỗ trợ service worker
+    const options = {
+      body: body,
+      icon: '/favicon.ico',
+      badge: '/favicon.ico',
+      tag: groupTag,
+      data: {
+        click_action: clickAction
+      }
+    };
     const notification = new Notification(title, options);
     notification.onclick = (event) => {
       event.preventDefault();
       window.focus();
       window.location.hash = `#home?conversationId=${conversationId}`;
     };
+  }
+}
+
+/**
+ * Thu hồi thông báo native trên trình duyệt khi tin nhắn bị xoá/thu hồi ở foreground
+ * @param {string} messageId ID tin nhắn bị thu hồi
+ */
+export async function revokeNativeNotification(messageId) {
+  if (!messageId) return;
+  if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const notifications = await registration.getNotifications();
+      notifications.forEach((notification) => {
+        if (notification.data && Array.isArray(notification.data.messages)) {
+          const hasMessage = notification.data.messages.some(m => String(m.messageId) === String(messageId));
+          if (hasMessage) {
+            const updatedMessages = notification.data.messages.filter(m => String(m.messageId) !== String(messageId));
+            notification.close(); // Đóng thông báo hiện tại
+            
+            if (updatedMessages.length > 0) {
+              const count = updatedMessages.length;
+              let originalTitle = notification.title;
+              const titleMatch = originalTitle.match(/^(.*?)\s*\(\d+\)$/);
+              if (titleMatch) {
+                originalTitle = titleMatch[1];
+              }
+              const finalTitle = count > 1 ? `${originalTitle} (${count})` : originalTitle;
+              const finalBody = updatedMessages.slice(-3).map(m => m.body).join('\n');
+              
+              registration.showNotification(finalTitle, {
+                body: finalBody,
+                icon: notification.icon,
+                badge: notification.badge,
+                tag: notification.tag,
+                silent: true,
+                data: {
+                  ...notification.data,
+                  messages: updatedMessages
+                }
+              });
+            }
+          }
+        } else if (notification.tag === messageId) {
+          notification.close();
+        }
+      });
+    } catch (err) {
+      console.error('Lỗi khi thu hồi thông báo qua Service Worker (foreground):', err);
+    }
   }
 }

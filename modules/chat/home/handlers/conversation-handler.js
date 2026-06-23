@@ -2,6 +2,7 @@ import { api } from '../../../../js/core/api.js';
 import { socket } from '../../../../js/core/websocket.js';
 import { VoiceRecorder } from './voice-recorder.js';
 import { AttachmentHandler } from './attachment-handler.js';
+import { t } from '../../../../js/core/i18n.js';
 
 export const ConversationHandler = {
   async loadConversations(ctx, autoSelect = true, initialConversationId = null, nextPage = false, forceRefresh = false) {
@@ -353,19 +354,31 @@ export const ConversationHandler = {
   },
 
   async deleteConversation(ctx, conversationId) {
-    const { showDialog } = await import('../../../../js/shared/dialog/dialog.js');
-    const confirm = await showDialog({
-      title: 'Xóa cuộc trò chuyện',
-      message: 'Bạn có chắc chắn muốn xóa cuộc trò chuyện này không? Hành động này không thể hoàn tác.',
-      type: 'warning',
-      buttons: [
-        { text: 'Hủy', type: 'secondary', value: false },
-        { text: 'Xóa', type: 'danger', value: true }
-      ]
-    });
+    try {
+      const response = await api.patch(`conversations/${conversationId}`);
+      if (response && response.success) {
+        ctx.conversations = ctx.conversations.filter(c => String(c.conversationId) !== String(conversationId));
+        ctx.renderConversationsList();
+        if (String(ctx.conversationId) === String(conversationId)) {
+          ctx.conversationId = null;
+          ctx.messages = [];
+          ctx.renderEmptyChatFrame();
+        }
+      } else {
+        throw new Error(response?.message || t('delete_convo_failed_msg'));
+      }
+    } catch (err) {
+      console.warn('Delete conversation API failed:', err);
+      const { showDialog } = await import('../../../../js/shared/dialog/dialog.js');
+      await showDialog({
+        title: t('error_title'),
+        message: err.message || t('delete_convo_failed_msg'),
+        type: 'error'
+      });
+    }
+  },
 
-    if (!confirm) return;
-
+  async disbandConversation(ctx, conversationId) {
     try {
       const response = await api.delete(`conversations/${conversationId}`);
       if (response && response.success) {
@@ -377,13 +390,14 @@ export const ConversationHandler = {
           ctx.renderEmptyChatFrame();
         }
       } else {
-        throw new Error(response?.message || 'Lỗi khi xóa cuộc trò chuyện');
+        throw new Error(response?.message || t('disband_convo_failed_msg'));
       }
     } catch (err) {
-      console.warn('Delete conversation API failed:', err);
+      console.warn('Disband conversation API failed:', err);
+      const { showDialog } = await import('../../../../js/shared/dialog/dialog.js');
       await showDialog({
-        title: 'Lỗi thực hiện',
-        message: err.message || 'Không thể xóa cuộc trò chuyện. Vui lòng thử lại.',
+        title: t('error_title'),
+        message: err.message || t('disband_convo_failed_msg'),
         type: 'error'
       });
     }

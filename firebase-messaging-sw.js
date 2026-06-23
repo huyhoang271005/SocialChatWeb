@@ -47,10 +47,42 @@ onBackgroundMessage(messaging, async (payload) => {
 
   // Nếu là sự kiện thu hồi tin nhắn
   if (messageType === 'REVOKE_MESSAGE' && messageId) {
-    // 1. Âm thầm xoá thông báo cũ có messageId tương ứng
-    self.registration.getNotifications({ tag: messageId }).then((notifications) => {
+    // 1. Âm thầm xoá thông báo cũ hoặc lọc bỏ tin nhắn bị thu hồi khỏi nhóm thông báo
+    self.registration.getNotifications().then((notifications) => {
       notifications.forEach((notification) => {
-        notification.close();
+        if (notification.data && Array.isArray(notification.data.messages)) {
+          const hasMessage = notification.data.messages.some(m => String(m.messageId) === String(messageId));
+          if (hasMessage) {
+            const updatedMessages = notification.data.messages.filter(m => String(m.messageId) !== String(messageId));
+            notification.close(); // Đóng thông báo hiện tại
+            
+            if (updatedMessages.length > 0) {
+              // Nếu vẫn còn tin nhắn khác trong nhóm, cập nhật thông báo mới (không rung/âm thanh để tránh phiền)
+              const count = updatedMessages.length;
+              let originalTitle = notification.title;
+              const titleMatch = originalTitle.match(/^(.*?)\s*\(\d+\)$/);
+              if (titleMatch) {
+                originalTitle = titleMatch[1];
+              }
+              const finalTitle = count > 1 ? `${originalTitle} (${count})` : originalTitle;
+              const finalBody = updatedMessages.slice(-3).map(m => m.body).join('\n');
+              
+              self.registration.showNotification(finalTitle, {
+                body: finalBody,
+                icon: notification.icon,
+                badge: notification.badge,
+                tag: notification.tag,
+                silent: true,
+                data: {
+                  ...notification.data,
+                  messages: updatedMessages
+                }
+              });
+            }
+          }
+        } else if (notification.tag === messageId) {
+          notification.close();
+        }
       });
     });
 
@@ -62,9 +94,11 @@ onBackgroundMessage(messaging, async (payload) => {
       tag: silentTag
     }).then(() => {
       // Đóng ngay lập tức để không hiển thị trên màn hình
-      self.registration.getNotifications({ tag: silentTag }).then((notifications) => {
+      self.registration.getNotifications().then((notifications) => {
         notifications.forEach((notification) => {
-          notification.close();
+          if (notification.tag === silentTag) {
+            notification.close();
+          }
         });
       });
     });
@@ -81,9 +115,11 @@ onBackgroundMessage(messaging, async (payload) => {
       body: '',
       tag: silentTag
     }).then(() => {
-      self.registration.getNotifications({ tag: silentTag }).then((notifications) => {
+      self.registration.getNotifications().then((notifications) => {
         notifications.forEach((notification) => {
-          notification.close();
+          if (notification.tag === silentTag) {
+            notification.close();
+          }
         });
       });
     });
@@ -91,19 +127,58 @@ onBackgroundMessage(messaging, async (payload) => {
   }
 
   const notificationTitle = dataSource.title || 'Thông báo mới';
-  const notificationOptions = {
+  // Ưu tiên gom nhóm theo tag từ server trả về, sau đó mới đến conversationId
+  const groupTag = dataSource.tag || (payload.notification && payload.notification.tag) || (conversationId ? `convo-${conversationId}` : messageId);
+  const clickAction = dataSource.link || `${self.location.origin}/#home?conversationId=${conversationId}`;
+
+  // Lấy danh sách các tin nhắn đã có trong nhóm thông báo này
+  let messages = [];
+  try {
+    // Lấy tất cả thông báo hiện có và tìm kiếm theo tag để tăng độ tương thích trên thiết bị di động
+    const activeNotifications = await self.registration.getNotifications();
+    const oldNotification = activeNotifications.find(n => n.tag === groupTag);
+    if (oldNotification) {
+      if (oldNotification.data && Array.isArray(oldNotification.data.messages)) {
+        messages = [...oldNotification.data.messages];
+      }
+      // Đóng thông báo cũ để thông báo mới hiện lên dạng pop-up (lướt ra) trên màn hình
+      oldNotification.close();
+    }
+  } catch (e) {
+    console.error('Lỗi khi lấy thông báo cũ:', e);
+  }
+
+  // Thêm tin nhắn mới vào danh sách nhóm
+  messages.push({
+    messageId: messageId,
     body: dataSource.body || 'Bạn có tin nhắn mới.',
+    title: notificationTitle
+  });
+
+  const count = messages.length;
+  // Tạo tiêu đề kèm số lượng nếu có từ 2 tin nhắn trở lên
+  const finalTitle = count > 1 ? `${notificationTitle} (${count})` : notificationTitle;
+
+  // Tạo nội dung hiển thị (tối đa 3 tin nhắn gần nhất)
+  let finalBody = dataSource.body || 'Bạn có tin nhắn mới.';
+  if (count > 1) {
+    const recentMessages = messages.slice(-3);
+    finalBody = recentMessages.map(m => m.body).join('\n');
+  }
+
+  const notificationOptions = {
+    body: finalBody,
     icon: dataSource.icon || '/favicon.ico', // Bốc trường "icon" chính là avatar phòng chat từ Java truyền sang
     badge: '/favicon.ico',
-    tag: messageId, // Đặt tag là messageId để định danh phục vụ thu hồi
+    tag: groupTag,
     data: {
-      // Bốc trường "link" điều hướng từ Java
-      click_action: dataSource.link || `${self.location.origin}/#home?conversationId=${conversationId}`
+      click_action: clickAction,
+      messages: messages
     }
   };
 
   // Ra lệnh hiển thị thông báo
-  self.registration.showNotification(notificationTitle, notificationOptions);
+  self.registration.showNotification(finalTitle, notificationOptions);
 });
 
 // Giữ nguyên đoạn sự kiện click cũ của bạn

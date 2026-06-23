@@ -106,6 +106,15 @@ export const HomeView = {
                 </svg>
                 <span>${t('document')}</span>
               </button>
+              <button id="menu-record-voice" class="menu-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                  <path d="M19 10v1a7 7 0 0 1-14 0v-1"></path>
+                  <line x1="12" y1="19" x2="12" y2="23"></line>
+                  <line x1="8" y1="23" x2="16" y2="23"></line>
+                </svg>
+                <span>${t('record_voice')}</span>
+              </button>
             </div>
 
             <!-- Staged Files Preview Area -->
@@ -134,7 +143,7 @@ export const HomeView = {
             </div>
 
             <!-- Input actions row -->
-            <div class="chat-input-row" style="display: flex; align-items: center; gap: 15px; width: 100%;">
+            <div class="chat-input-row">
               <!-- Mobile actions trigger button (+) -->
               <button id="btn-toggle-extra-actions" class="btn btn-secondary chat-footer-btn mobile-actions-trigger" title="${t('more_actions')}" style="width: 40px; min-width: 40px; height: 40px; padding: 0; display: none; align-items: center; justify-content: center; border-radius: 50%;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -160,8 +169,8 @@ export const HomeView = {
                 </svg>
               </button>
               
-              <!-- Voice recorder button stays outside on both mobile and desktop -->
-              <button id="btn-record-voice" class="btn btn-secondary chat-footer-btn" title="${t('record_voice')}" style="width: 40px; min-width: 40px; height: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%;">
+              <!-- Voice recorder button stays outside on desktop, hidden on mobile -->
+              <button id="btn-record-voice" class="btn btn-secondary chat-footer-btn desktop-only-action" title="${t('record_voice')}" style="width: 40px; min-width: 40px; height: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="mic-icon">
                   <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
                   <path d="M19 10v1a7 7 0 0 1-14 0v-1"></path>
@@ -179,14 +188,16 @@ export const HomeView = {
 
               <textarea 
                 id="message-input" 
-                class="form-input" 
+                class="form-input chat-input-textarea" 
                 placeholder="${t('input_placeholder')}" 
                 autocomplete="off"
                 rows="1"
-                style="resize: none; height: 44px; min-height: 44px; max-height: 120px; padding: 10px 16px; flex: 1; line-height: 1.4; overflow-y: auto;"
               ></textarea>
-              <button id="btn-send-message" class="btn btn-primary" style="width: auto;">
-                ${t('send')}
+              <button id="btn-send-message" class="chat-send-btn" title="${t('send')}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
               </button>
             </div>
           </div>
@@ -662,10 +673,11 @@ export const HomeView = {
           const body = payload.notification?.body || payload.data?.body || t('new_message_alert');
           const conversationId = payload.data?.conversationId || payload.data?.id;
           const messageId = payload.data?.messageId;
+          const tag = payload.data?.tag || payload.notification?.tag;
 
           // Nếu ngoài cuộc trò chuyện đó thì hiển thị thông báo native lên
           if (String(conversationId) !== String(this.conversationId)) {
-            showNativeNotification(title, body, conversationId, messageId);
+            showNativeNotification(title, body, conversationId, messageId, tag);
           }
         });
       })
@@ -697,6 +709,7 @@ export const HomeView = {
     const chatExtraActionsMenu = document.getElementById('chat-extra-actions-menu');
     const menuUploadVideo = document.getElementById('menu-upload-video');
     const menuUploadFile = document.getElementById('menu-upload-file');
+    const menuRecordVoice = document.getElementById('menu-record-voice');
 
     const stageFiles = (files, type) => {
       this.stagedFiles = AttachmentHandler.stageFiles(files, type, this.stagedFiles);
@@ -748,27 +761,34 @@ export const HomeView = {
       });
     }
 
-    if (btnRecordVoice) {
-      btnRecordVoice.addEventListener('click', async () => {
-        const voiceRecordingIndicator = document.getElementById('voice-recording-indicator');
-        const voiceDuration = document.getElementById('voice-duration');
+    const triggerVoiceRecord = async () => {
+      const voiceRecordingIndicator = document.getElementById('voice-recording-indicator');
+      const voiceDuration = document.getElementById('voice-duration');
 
-        if (!this.isRecording) {
-          await VoiceRecorder.start(
-            this,
-            micIcon,
-            messageInput,
-            voiceRecordingIndicator,
-            voiceDuration,
-            (audioFile) => {
-              this.showVoicePreview(audioFile);
-            },
-            showDialog
-          );
-        } else {
-          VoiceRecorder.stop(this);
-        }
-      });
+      if (!this.isRecording) {
+        if (chatExtraActionsMenu) chatExtraActionsMenu.style.display = 'none';
+        await VoiceRecorder.start(
+          this,
+          micIcon,
+          messageInput,
+          voiceRecordingIndicator,
+          voiceDuration,
+          (audioFile) => {
+            this.showVoicePreview(audioFile);
+          },
+          showDialog
+        );
+      } else {
+        VoiceRecorder.stop(this);
+      }
+    };
+
+    if (btnRecordVoice) {
+      btnRecordVoice.addEventListener('click', triggerVoiceRecord);
+    }
+
+    if (menuRecordVoice) {
+      menuRecordVoice.addEventListener('click', triggerVoiceRecord);
     }
 
     // Gắn sự kiện cho các nút trong khung xem trước ghi âm (voice preview)
@@ -851,7 +871,8 @@ export const HomeView = {
       this.getUserNameAndAvatar.bind(this),
       this.selectConversation.bind(this),
       this.muteConversation.bind(this),
-      this.deleteConversation.bind(this)
+      this.deleteConversation.bind(this),
+      this.disbandConversation.bind(this)
     );
   },
 
@@ -869,6 +890,10 @@ export const HomeView = {
 
   deleteConversation(conversationId) {
     return ConversationHandler.deleteConversation(this, conversationId);
+  },
+
+  disbandConversation(conversationId) {
+    return ConversationHandler.disbandConversation(this, conversationId);
   },
 
   updateChatHeader(title, avatarUrl, statusText, conversationId = null, conversations = []) {

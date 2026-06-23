@@ -12,6 +12,7 @@ export function showViewMembersModal(conversationId, conversations) {
   const myConvoEntry = userConversations.find(u => String(u.userId) === currentUserId);
   const myRole = myConvoEntry ? String(myConvoEntry.conversationRole || 'MEMBER').toUpperCase() : 'MEMBER';
   const canDeleteMember = !convo || !convo.group || myRole === 'CREATOR';
+  const canChangeRole = !convo || !convo.group || myRole === 'CREATOR' || myRole === 'ADMIN';
 
   overlay.innerHTML = `
     <div class="chat-modal-card">
@@ -93,6 +94,7 @@ export function showViewMembersModal(conversationId, conversations) {
       }
 
       const isDeletable = !isSelf && canDeleteMember;
+      const isRoleEditable = !isSelf && role !== 'CREATOR' && canChangeRole;
 
       return `
         <div class="member-list-item" data-id="${member.userId}" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: hsla(230, 25%, 6%, 0.25); cursor: default; transition: var(--transition-smooth);">
@@ -106,14 +108,23 @@ export function showViewMembersModal(conversationId, conversations) {
               <span style="font-size: 0.75rem; color: var(--text-muted);">@${member.username || t('no_username')}</span>
             </div>
           </div>
-          ${isDeletable ? `
-          <button class="btn-delete-member" data-id="${member.userId}" title="${t('delete_member_title')}" style="background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; transition: all 0.2s ease; padding: 0;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--error);">
-              <polyline points="3 6 5 6 21 6"></polyline>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-            </svg>
-          </button>
-          ` : ''}
+          <div style="display: flex; align-items: center; gap: 4px;">
+            ${isRoleEditable ? `
+            <button class="btn-change-role" data-id="${member.userId}" data-role="${role}" title="${t('change_role')}" style="background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; transition: all 0.2s ease; padding: 0;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--warning);">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+            </button>
+            ` : ''}
+            ${isDeletable ? `
+            <button class="btn-delete-member" data-id="${member.userId}" title="${t('delete_member_title')}" style="background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; transition: all 0.2s ease; padding: 0;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--error);">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </button>
+            ` : ''}
+          </div>
         </div>
       `;
     }).join('');
@@ -168,6 +179,69 @@ export function showViewMembersModal(conversationId, conversations) {
             await showDialog({
               title: t('error_title'),
               message: err.message || t('delete_member_error'),
+              type: 'error'
+            });
+          }
+        }
+      });
+    });
+
+    const changeRoleButtons = container.querySelectorAll('.btn-change-role');
+    changeRoleButtons.forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const userId = btn.dataset.id;
+        const currentRole = btn.dataset.role;
+        const memberObj = userConversations.find(u => String(u.userId) === String(userId));
+        const memberName = memberObj?.fullName || memberObj?.user?.fullName || memberObj?.displayName || memberObj?.username || t('role_member');
+        
+        const newRole = currentRole === 'ADMIN' ? 'MEMBER' : 'ADMIN';
+        const newRoleLabel = newRole === 'ADMIN' ? t('role_admin') : t('role_member');
+
+        const { showDialog } = await import('../../../../js/shared/dialog/dialog.js');
+        const confirm = await showDialog({
+          title: t('confirm_change_role_title'),
+          message: t('confirm_change_role_msg').replace('{name}', memberName).replace('{role}', newRoleLabel),
+          type: 'warning',
+          buttons: [
+            { text: t('logout_cancel'), type: 'secondary', value: false },
+            { text: t('submit') || 'Xác nhận', type: 'primary', value: true }
+          ]
+        });
+
+        if (confirm) {
+          btn.disabled = true;
+          const oldIcon = btn.innerHTML;
+          btn.innerHTML = '<div class="spinner-sm" style="margin: 0; width: 14px; height: 14px; border-color: #fff;"></div>';
+
+          try {
+            const res = await api.put(`conversations/${conversationId}/member/${userId}`, {
+              conversationRole: newRole
+            });
+
+            if (res && res.success) {
+              if (memberObj) {
+                memberObj.conversationRole = newRole;
+              }
+              renderMembersList();
+              
+              // Trigger update in sidebar / main view
+              document.dispatchEvent(new CustomEvent('refresh-conversations'));
+              
+              await showDialog({
+                title: t('success_title'),
+                message: t('change_role_success').replace('{name}', memberName).replace('{role}', newRoleLabel),
+                type: 'success'
+              });
+            } else {
+              throw new Error(res?.message || t('change_role_failed'));
+            }
+          } catch (err) {
+            btn.disabled = false;
+            btn.innerHTML = oldIcon;
+            await showDialog({
+              title: t('error_title'),
+              message: err.message || t('change_role_failed'),
               type: 'error'
             });
           }

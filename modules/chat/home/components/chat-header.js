@@ -160,11 +160,15 @@ export function updateChatHeader(title, avatarUrl, statusText, conversationId = 
 
           if (confirm) {
             try {
-              let res = await api.delete('conversations/member/leave', { conversationId });
+              let res = await api.patch(`conversations/${conversationId}/member/${currentUserId}`);
               if (!res || !res.success) {
-                res = await api.delete('conversation/member/leave', { conversationId });
+                res = await api.patch(`conversation/${conversationId}/member/${currentUserId}`);
               }
               if (res && res.success) {
+                // Refresh list and clear active conversation
+                document.dispatchEvent(new CustomEvent('refresh-conversations'));
+                window.location.hash = 'home';
+
                 await showDialog({
                   title: t('success_title'),
                   message: t('leave_convo_success'),

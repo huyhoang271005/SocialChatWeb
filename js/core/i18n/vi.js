@@ -9,7 +9,7 @@ export const vi = {
   logout: 'Đăng xuất',
   language: 'Tiếng Việt',
   change_language: 'Đổi ngôn ngữ',
-  
+
   // Connection Status
   connected: 'Kết nối thành công',
   disconnected: 'Mất kết nối',
@@ -36,7 +36,7 @@ export const vi = {
   confirm_logout_message: 'Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?',
   logout_cancel: 'Hủy',
   logout_confirm: 'Đăng xuất',
-  
+
   confirm_disable_notifications_title: 'Tắt thông báo',
   confirm_disable_notifications_message: 'Bạn có chắc chắn muốn tắt thông báo ứng dụng?',
   confirm_enable_notifications_title: 'Bật thông báo',
@@ -47,7 +47,7 @@ export const vi = {
   notification_connection_error: 'Đã xảy ra lỗi hệ thống khi kết nối đến máy chủ.',
   enable_notifications_btn: 'Bật thông báo ứng dụng',
   disable_notifications_btn: 'Tắt thông báo ứng dụng',
-  
+
   // Chat Message Items
   sent: 'Đã gửi',
   smail_remove_member: '{initiator} đã xoá {target} ra khỏi nhóm',
@@ -63,19 +63,19 @@ export const vi = {
   revoke: 'Thu hồi',
   confirm_revoke_title: 'Thu hồi tin nhắn',
   confirm_revoke_message: 'Bạn có chắc chắn muốn thu hồi tin nhắn này không?',
-  
+
   // Media snippets
   snippet_image: '[Hình ảnh]',
   snippet_video: '[Video]',
   snippet_audio: '[Tin nhắn thoại]',
   snippet_file: '[Tài liệu]',
   download_file: 'Tải tệp tin',
-  
+
   // User roles inside groups
   role_creator: 'Trưởng nhóm',
   role_admin: 'Phó nhóm',
   role_member: 'Thành viên',
-  
+
   // Dialogs general
   error_title: 'Lỗi',
   success_title: 'Thành công',
@@ -420,7 +420,7 @@ export const vi = {
   create_conversation_failed_title: 'Lỗi tạo cuộc trò chuyện',
   create_conversation_failed_msg: 'Không thể tạo cuộc trò chuyện.',
   system_error_generic_msg: 'Đã có lỗi hệ thống xảy ra.',
-  
+
   // Chat Page UI and errors
   loading_list: 'Đang tải danh sách...',
   more_actions: 'Thêm hành động',
@@ -452,7 +452,17 @@ export const vi = {
   mute: 'Tắt tiếng',
   delete_convo_title: 'Xóa cuộc trò chuyện',
   delete_convo_msg: 'Bạn có chắc chắn muốn xóa cuộc trò chuyện này không? Hành động này không thể hoàn tác.',
-  
+  disband: 'Giải tán',
+  disband_convo_title: 'Giải tán cuộc trò chuyện',
+  disband_convo_msg: 'Bạn có chắc chắn muốn giải tán cuộc trò chuyện này không? Hành động này không thể hoàn tác.',
+  delete_convo_failed_msg: 'Không thể xóa cuộc trò chuyện. Vui lòng thử lại.',
+  disband_convo_failed_msg: 'Không thể giải tán cuộc trò chuyện. Vui lòng thử lại.',
+  change_role: 'Thay đổi chức vụ',
+  confirm_change_role_title: 'Thay đổi chức vụ',
+  confirm_change_role_msg: 'Bạn có chắc chắn muốn thay đổi chức vụ của {name} thành {role} không?',
+  change_role_success: 'Đã thay đổi chức vụ của {name} thành {role} thành công.',
+  change_role_failed: 'Không thể thay đổi chức vụ. Vui lòng thử lại.',
+
   // Chat Modals & Header
   convo_options_title: 'Tùy chọn cuộc trò chuyện',
   add_member: 'Thêm thành viên',
@@ -487,5 +497,22 @@ export const vi = {
   delete_member_success: 'Đã xóa thành viên "{name}" khỏi nhóm.',
   delete_member_failed: 'Không thể xóa thành viên',
   delete_member_error: 'Đã xảy ra lỗi khi xóa thành viên.',
-  message: 'Tin nhắn'
+  message: 'Tin nhắn',
+  
+  // API response errors
+  api_session_expired_desc: 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.',
+  api_session_expired_title: 'Phiên đăng nhập hết hạn',
+  api_refresh_failed: 'Lỗi khi làm mới phiên đăng nhập',
+  api_session_error: 'Lỗi phiên đăng nhập',
+  api_connection_error_refresh: 'Lỗi kết nối máy chủ khi làm mới phiên',
+  api_connection_error_title: 'Lỗi kết nối',
+  api_forbidden_desc: 'Bạn không có quyền thực hiện hành động này hoặc truy cập trang này.',
+  api_forbidden_title: 'Không có quyền',
+  api_server_connection_failed: 'Lỗi kết nối đến server',
+  api_invalid_file: 'File không hợp lệ',
+  api_image_signature_failed: 'Không lấy được chữ ký tải ảnh từ hệ thống',
+  api_file_signature_failed: 'Không lấy được chữ ký tải tệp từ hệ thống',
+  api_image_upload_failed: 'Không thể tải ảnh lên',
+  api_file_upload_failed: 'Không thể tải tệp tin lên',
+  api_cloudinary_error: 'Lỗi từ Cloudinary'
 };

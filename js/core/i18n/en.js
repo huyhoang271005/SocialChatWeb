@@ -452,6 +452,16 @@ export const en = {
   mute: 'Mute',
   delete_convo_title: 'Delete Conversation',
   delete_convo_msg: 'Are you sure you want to delete this conversation? This action cannot be undone.',
+  disband: 'Disband',
+  disband_convo_title: 'Disband Conversation',
+  disband_convo_msg: 'Are you sure you want to disband this conversation? This action cannot be undone.',
+  delete_convo_failed_msg: 'Failed to delete the conversation. Please try again.',
+  disband_convo_failed_msg: 'Failed to disband the conversation. Please try again.',
+  change_role: 'Change Role',
+  confirm_change_role_title: 'Change Role',
+  confirm_change_role_msg: 'Are you sure you want to change the role of {name} to {role}?',
+  change_role_success: 'Successfully changed the role of {name} to {role}.',
+  change_role_failed: 'Failed to change role. Please try again.',
   
   // Chat Modals & Header
   convo_options_title: 'Conversation Options',
@@ -487,5 +497,22 @@ export const en = {
   delete_member_success: 'Removed member "{name}" from the group.',
   delete_member_failed: 'Failed to remove member.',
   delete_member_error: 'An error occurred while removing the member.',
-  message: 'Message'
+  message: 'Message',
+  
+  // API response errors
+  api_session_expired_desc: 'Session has expired, please log in again.',
+  api_session_expired_title: 'Session Expired',
+  api_refresh_failed: 'Error refreshing session',
+  api_session_error: 'Session Error',
+  api_connection_error_refresh: 'Server connection error while refreshing session',
+  api_connection_error_title: 'Connection Error',
+  api_forbidden_desc: 'You do not have permission to perform this action or access this page.',
+  api_forbidden_title: 'Permission Denied',
+  api_server_connection_failed: 'Connection error to the server',
+  api_invalid_file: 'Invalid file',
+  api_image_signature_failed: 'Unable to retrieve image upload signature from the system',
+  api_file_signature_failed: 'Unable to retrieve file upload signature from the system',
+  api_image_upload_failed: 'Unable to upload image',
+  api_file_upload_failed: 'Unable to upload file',
+  api_cloudinary_error: 'Cloudinary error'
 };
