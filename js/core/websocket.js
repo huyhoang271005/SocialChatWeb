@@ -208,7 +208,7 @@ class WebSocketManager {
   send(conversationId, text, type = 'TEXT', fileId = null, replyMessageId = null) {
     const clientMsgId = generateUUID();
     const payload = {
-      message: {
+      data: {
         conversationId,
         text,
         type
@@ -216,10 +216,10 @@ class WebSocketManager {
       clientMsgId
     };
     if (fileId) {
-      payload.message.fileId = fileId;
+      payload.data.fileId = fileId;
     }
     if (replyMessageId) {
-      payload.message.replyMessageId = replyMessageId;
+      payload.data.replyMessageId = replyMessageId;
     }
 
     if (this.client && this.client.connected) {
@@ -236,7 +236,7 @@ class WebSocketManager {
       this.client.publish({
         destination: '/app/chat.typing',
         body: JSON.stringify({
-          message: { conversationId },
+          data: { conversationId },
           clientMsgId: generateUUID()
         })
       });
@@ -248,7 +248,7 @@ class WebSocketManager {
       this.client.publish({
         destination: '/app/chat.untyping',
         body: JSON.stringify({
-          message: { conversationId },
+          data: { conversationId },
           clientMsgId: generateUUID()
         })
       });
@@ -258,7 +258,7 @@ class WebSocketManager {
   sendSeen(conversationId, messageId, senderId) {
     if (this.client && this.client.connected) {
       const payload = {
-        message : {
+        data: {
           conversationId,
           messageId,
           senderId
@@ -275,7 +275,7 @@ class WebSocketManager {
   sendRevoke(conversationId, messageId) {
     if (this.client && this.client.connected) {
       const payload = {
-        message: {
+        data: {
           conversationId,
           messageId
         },
@@ -283,6 +283,38 @@ class WebSocketManager {
       };
       this.client.publish({
         destination: '/app/chat.revoke',
+        body: JSON.stringify(payload)
+      });
+    }
+  }
+
+  sendReaction(messageId, reactionType) {
+    if (this.client && this.client.connected) {
+      const payload = {
+        data: {
+          messageId,
+          reactionType,
+          ReactionType: reactionType
+        },
+        clientMsgId: generateUUID()
+      };
+      this.client.publish({
+        destination: '/app/chat.reaction',
+        body: JSON.stringify(payload)
+      });
+    }
+  }
+
+  sendUnreaction(messageId) {
+    if (this.client && this.client.connected) {
+      const payload = {
+        data: {
+          messageId
+        },
+        clientMsgId: generateUUID()
+      };
+      this.client.publish({
+        destination: '/app/chat.unreaction',
         body: JSON.stringify(payload)
       });
     }

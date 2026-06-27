@@ -512,13 +512,7 @@ body.light-theme .message-bubble.message-media {
 
   /* Show message options dropdown positioned better on mobile */
   .message-dropdown-menu {
-    min-width: 150px;
-    right: 0;
-    left: auto !important;
-  }
-  .message-bubble-wrapper .message-dropdown-menu {
-    bottom: auto;
-    top: 0;
+    min-width: 270px;
   }
   /* Ensure conversation name truncates properly */
   .conversation-name span {
@@ -822,7 +816,21 @@ body.light-theme .message-bubble.message-media {
   100% { border-color: rgba(239, 68, 68, 0.45); }
 }
 
-/* Message options dropdown and items */
+/* Message wrapper container for compact reaction badges */
+.message-wrapper-container {
+  position: relative;
+  display: inline-block;
+  width: fit-content;
+  max-width: 60%;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .message-wrapper-container {
+    max-width: 85%;
+  }
+}
+
 .message-options-dropdown {
   position: relative;
   opacity: 0;

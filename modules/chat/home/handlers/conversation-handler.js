@@ -261,6 +261,9 @@ export const ConversationHandler = {
       }
 
       ctx.updateChatHeader(displayTitle || ('Cuộc trò chuyện ' + conversationId), avatarUrl, convo.group ? 'Nhóm trò chuyện' : 'Đang hoạt động', conversationId, ctx.conversations);
+
+      // Check rolesCanChat restriction
+      this.updateChatInputRestriction(ctx, convo);
     }
 
     const cacheKey = `chat_messages_cache_${conversationId}`;
@@ -293,9 +296,24 @@ export const ConversationHandler = {
       ctx.messages = [];
       if (msgContainer) {
         msgContainer.innerHTML = `
-          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-muted);">
-            <div class="spinner" style="margin-bottom: 10px;"></div>
-            Đang tải tin nhắn...
+          <div class="chat-messages-skeleton" style="display: flex; flex-direction: column; gap: 15px; height: 100%; width: 100%; justify-content: flex-end; padding: 20px 0; box-sizing: border-box;">
+            ${Array(4).fill(0).map((_, idx) => {
+              const isOutgoing = idx % 2 === 1;
+              const alignSelf = isOutgoing ? 'flex-end' : 'flex-start';
+              const borderRound = isOutgoing ? 'border-bottom-right-radius: 4px;' : 'border-bottom-left-radius: 4px;';
+              const bg = isOutgoing ? 'background: var(--accent-gradient); opacity: 0.25;' : 'background: hsla(230, 25%, 20%, 0.45);';
+              const width = idx === 0 ? '45%' : idx === 1 ? '30%' : idx === 2 ? '60%' : '40%';
+              return `
+                <div class="message-row" style="display: flex; flex-direction: column; align-items: ${alignSelf}; width: 100%;">
+                  <div class="skeleton-loader" style="width: ${width}; height: 50px; border-radius: var(--radius-md); ${borderRound} ${bg}">
+                    <div style="padding: 12px 16px; display: flex; flex-direction: column; gap: 8px;">
+                      <div class="skeleton-loader skeleton-text" style="width: 80%; height: 10px; margin-bottom: 0; background: rgba(255,255,255,0.15);"></div>
+                      <div class="skeleton-loader skeleton-text" style="width: 40%; height: 8px; margin-bottom: 0; background: rgba(255,255,255,0.15);"></div>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
           </div>
         `;
       }
@@ -400,6 +418,34 @@ export const ConversationHandler = {
         message: err.message || t('disband_convo_failed_msg'),
         type: 'error'
       });
+    }
+  },
+
+  updateChatInputRestriction(ctx, convo) {
+    if (!convo) return;
+    const currentUserId = localStorage.getItem('chat_user_id');
+    const myConvoEntry = convo.userConversations?.find(u => String(u.userId) === String(currentUserId));
+    const myRole = myConvoEntry ? String(myConvoEntry.conversationRole || 'MEMBER').toUpperCase() : 'MEMBER';
+
+    let canChat = true;
+    if (convo.rolesCanChat && Array.isArray(convo.rolesCanChat)) {
+      const allowedRoles = convo.rolesCanChat.map(r => String(r).toUpperCase());
+      canChat = allowedRoles.includes(myRole);
+    }
+
+    const inputRow = document.querySelector('.chat-input-row');
+    const extraActionsMenu = document.getElementById('chat-extra-actions-menu');
+    const restrictedBanner = document.getElementById('restricted-chat-banner');
+
+    if (restrictedBanner) {
+      if (canChat) {
+        restrictedBanner.style.display = 'none';
+        if (inputRow) inputRow.style.display = 'flex';
+      } else {
+        restrictedBanner.style.display = 'flex';
+        if (inputRow) inputRow.style.display = 'none';
+        if (extraActionsMenu) extraActionsMenu.style.display = 'none';
+      }
     }
   }
 };

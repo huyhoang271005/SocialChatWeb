@@ -2,9 +2,79 @@ import { socket } from '../../../../js/core/websocket.js';
 import { api } from '../../../../js/core/api.js';
 import { getAvatarHtml } from './conversations.js';
 import { t, formatSystemMessage } from '../../../../js/core/i18n.js';
+import { formatSpecificTime } from '../handlers/socket-event-handler.js';
 
 
 
+
+const EMOJI_TO_REACTION_TYPE = {
+  "👍": "LIKE",
+  "❤️": "HEART",
+  "😆": "HAHA",
+  "😮": "WOW",
+  "😢": "SAD",
+  "😡": "ANGRY",
+  "🥰": "CARE",
+  "👏": "CLAP",
+  "🔥": "FIRE"
+};
+
+const REACTION_TYPE_TO_EMOJI = {
+  "LIKE": "👍",
+  "HEART": "❤️",
+  "HAHA": "😆",
+  "WOW": "😮",
+  "SAD": "😢",
+  "ANGRY": "😡",
+  "CARE": "🥰",
+  "CLAP": "👏",
+  "FIRE": "🔥"
+};
+
+function getReactionsHtml(reactorCount, isOutgoing, messageId) {
+  if (!reactorCount || typeof reactorCount !== 'object') {
+    return '';
+  }
+
+  // Filter active reaction types (count > 0) and sort descending by count
+  const activeReactions = Object.entries(reactorCount)
+    .filter(([_, count]) => count > 0)
+    .sort((a, b) => b[1] - a[1]);
+
+  if (activeReactions.length === 0) {
+    return '';
+  }
+
+  const limit = 5;
+  const topReactions = activeReactions.slice(0, limit);
+  const remainingCount = activeReactions.length - limit;
+
+  let pillsHtml = topReactions.map(([reactionKey, count]) => {
+    const emoji = REACTION_TYPE_TO_EMOJI[reactionKey] || reactionKey;
+    return `
+      <span class="reaction-pill-item" style="display: inline-flex; align-items: center; gap: 3px; background: hsla(230, 25%, 15%, 0.85); border: 1px solid var(--border-color); border-radius: var(--radius-full); padding: 2px 6px; font-size: 0.75rem; color: var(--text-secondary); cursor: pointer; user-select: none;" data-emoji="${emoji}" data-message-id="${messageId}">
+        <span>${emoji}</span>
+        <span style="font-weight: 600; font-size: 0.7rem;">${count}</span>
+      </span>
+    `;
+  }).join('');
+
+  if (remainingCount > 0) {
+    pillsHtml += `
+      <span class="reaction-pill-item extra-reactions-pill" style="display: inline-flex; align-items: center; background: hsla(230, 25%, 15%, 0.85); border: 1px solid var(--border-color); border-radius: var(--radius-full); padding: 2px 6px; font-size: 0.75rem; color: var(--text-muted); cursor: pointer; user-select: none;" data-message-id="${messageId}">
+        <span style="font-weight: 600; font-size: 0.7rem;">+${remainingCount}</span>
+      </span>
+    `;
+  }
+
+  const alignStyle = isOutgoing ? 'right: 8px;' : 'left: 8px;';
+
+  return `
+    <div class="message-reactions-container" style="position: absolute; bottom: -10px; ${alignStyle} display: flex; align-items: center; gap: 3px; z-index: 5; pointer-events: auto;">
+      ${pillsHtml}
+    </div>
+  `;
+}
 
 export function renderMessages(messages, conversationId, conversations = []) {
   const msgContainer = document.getElementById('chat-messages-container');
@@ -179,71 +249,35 @@ export function renderMessages(messages, conversationId, conversations = []) {
               <circle cx="12" cy="19" r="1.5"></circle>
             </svg>
           </button>
-          <div class="message-dropdown-menu" id="dropdown-${msg.id}" style="display: none; ${isOutgoing ? '' : 'left: 0; right: auto;'}">
-            <button class="dropdown-item btn-reply-message" data-id="${msg.id}">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; color: var(--accent-color);">
-                <polyline points="9 17 4 12 9 7"></polyline>
-                <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
-              </svg>
-              <span>${t('reply')}</span>
-            </button>
-            ${isOutgoing ? `
-              <button class="dropdown-item btn-revoke-message" data-id="${msg.id}">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; color: var(--error);">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <line x1="15" y1="9" x2="9" y2="15"></line>
-                  <line x1="9" y1="9" x2="15" y2="15"></line>
-                </svg>
-                <span style="color: var(--error);">${t('revoke')}</span>
-              </button>
-            ` : ''}
-          </div>
         </div>
       ` : '';
 
-      const swipeIndicatorHtml = `
-        <div class="swipe-reply-indicator" style="position: absolute; ${isOutgoing ? 'right: -40px;' : 'left: -40px;'} display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: hsla(230, 25%, 20%, 0.5); opacity: 0; transform: scale(0.5); transition: opacity 0.2s, transform 0.2s, ${isOutgoing ? 'right' : 'left'} 0.2s; color: var(--accent-color); pointer-events: none;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="9 17 4 12 9 7"></polyline>
-            <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
-          </svg>
-        </div>
-      `;
-
-      const groupBubbleHtml = `<div class="${bubbleClass}" data-id="${msg.id}" data-seen-by="${seenNamesStr}" style="max-width: 100%;">${replyQuoteHtml}${contentHtml}<div class="message-time" style="font-size: 0.7rem; text-align: right; opacity: 0.7; margin-top: 4px; white-space: normal;">${msg.time}</div></div>`;
-
-      return `
-        <div class="message-row group-incoming-row" id="msg-${msg.id}">
-          <img src="${senderAvatar}" class="message-sender-avatar" alt="${senderName}" title="${senderName}">
-          <div style="display: flex; flex-direction: column; align-items: flex-start; max-width: 65%;">
-            <span class="message-sender-name">${senderName}</span>
-            <div style="display: flex; align-items: center; gap: 8px; justify-content: flex-start; width: 100%; position: relative;" class="message-bubble-wrapper">
-              ${swipeIndicatorHtml}
-              ${groupBubbleHtml}
-              ${optionsHtml}
-            </div>
+      const dropdownHtml = displayOptions ? `
+        <div class="message-dropdown-menu" id="dropdown-${msg.id}" style="display: none; left: 0px !important; right: auto !important; bottom: 0px !important; top: auto !important; margin-bottom: 0px !important;">
+          <div class="reaction-picker-row" style="display: flex; gap: 6px; padding: 6px 8px; border-bottom: 1px solid var(--border-color); justify-content: space-around;">
+            <button class="reaction-emoji-btn" data-id="${msg.id}" data-reaction="LIKE" style="background: none; border: none; font-size: 1.15rem; cursor: pointer; padding: 2px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'" title="Like">👍</button>
+            <button class="reaction-emoji-btn" data-id="${msg.id}" data-reaction="HEART" style="background: none; border: none; font-size: 1.15rem; cursor: pointer; padding: 2px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'" title="Heart">❤️</button>
+            <button class="reaction-emoji-btn" data-id="${msg.id}" data-reaction="HAHA" style="background: none; border: none; font-size: 1.15rem; cursor: pointer; padding: 2px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'" title="Haha">😆</button>
+            <button class="reaction-emoji-btn" data-id="${msg.id}" data-reaction="WOW" style="background: none; border: none; font-size: 1.15rem; cursor: pointer; padding: 2px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'" title="Wow">😮</button>
+            <button class="reaction-emoji-btn" data-id="${msg.id}" data-reaction="SAD" style="background: none; border: none; font-size: 1.15rem; cursor: pointer; padding: 2px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'" title="Sad">😢</button>
+            <button class="reaction-emoji-btn" data-id="${msg.id}" data-reaction="ANGRY" style="background: none; border: none; font-size: 1.15rem; cursor: pointer; padding: 2px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'" title="Angry">😡</button>
+            <button class="reaction-emoji-btn" data-id="${msg.id}" data-reaction="CARE" style="background: none; border: none; font-size: 1.15rem; cursor: pointer; padding: 2px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'" title="Care">🥰</button>
+            <button class="reaction-emoji-btn" data-id="${msg.id}" data-reaction="CLAP" style="background: none; border: none; font-size: 1.15rem; cursor: pointer; padding: 2px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'" title="Clap">👏</button>
+            <button class="reaction-emoji-btn" data-id="${msg.id}" data-reaction="FIRE" style="background: none; border: none; font-size: 1.15rem; cursor: pointer; padding: 2px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'" title="Fire">🔥</button>
           </div>
-        </div>
-      `;
-    }
-
-    const rowAlign = isOutgoing ? 'align-items: flex-end;' : 'align-items: flex-start;';
-    const optionsHtml = displayOptions ? `
-      <div class="message-options-dropdown">
-        <button class="btn-message-options desktop-msg-options" data-id="${msg.id}" title="${t('options')}">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="1.5"></circle>
-            <circle cx="12" cy="5" r="1.5"></circle>
-            <circle cx="12" cy="19" r="1.5"></circle>
-          </svg>
-        </button>
-        <div class="message-dropdown-menu" id="dropdown-${msg.id}" style="display: none; ${isOutgoing ? '' : 'left: 0; right: auto;'}">
           <button class="dropdown-item btn-reply-message" data-id="${msg.id}">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; color: var(--accent-color);">
               <polyline points="9 17 4 12 9 7"></polyline>
               <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
             </svg>
             <span>${t('reply')}</span>
+          </button>
+          <button class="dropdown-item btn-remove-reaction" data-id="${msg.id}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; color: var(--text-muted);">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="15" y1="9" x2="9" y2="15"></line>
+            </svg>
+            <span>${t('remove_reaction')}</span>
           </button>
           ${isOutgoing ? `
             <button class="dropdown-item btn-revoke-message" data-id="${msg.id}">
@@ -256,6 +290,98 @@ export function renderMessages(messages, conversationId, conversations = []) {
             </button>
           ` : ''}
         </div>
+      ` : '';
+
+      const swipeIndicatorHtml = `
+        <div class="swipe-reply-indicator" style="position: absolute; ${isOutgoing ? 'right: -40px;' : 'left: -40px;'} display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: hsla(230, 25%, 20%, 0.5); opacity: 0; transform: scale(0.5); transition: opacity 0.2s, transform 0.2s, ${isOutgoing ? 'right' : 'left'} 0.2s; color: var(--accent-color); pointer-events: none;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 17 4 12 9 7"></polyline>
+            <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
+          </svg>
+        </div>
+      `;
+
+      const reactionsHtml = getReactionsHtml(msg.reactorCount, false, msg.id);
+      const hasReactions = msg.reactorCount && Object.values(msg.reactorCount).some(c => c > 0);
+      const wrapperMarginStyle = hasReactions ? 'margin-bottom: 12px;' : '';
+
+      const groupBubbleHtml = `
+        <div class="message-wrapper-container" style="max-width: 100% !important; ${wrapperMarginStyle}">
+          <div class="${bubbleClass}" data-id="${msg.id}" data-seen-by="${seenNamesStr}" data-created-at="${msg.createdAt || ''}" style="width: 100%; max-width: 100% !important;">
+            ${replyQuoteHtml}
+            ${contentHtml}
+            <div class="message-time" style="font-size: 0.7rem; text-align: right; opacity: 0.7; margin-top: 4px; white-space: normal;">${msg.time}</div>
+          </div>
+          ${reactionsHtml}
+        </div>
+      `;
+
+      return `
+        <div class="message-row group-incoming-row" id="msg-${msg.id}">
+          <img src="${senderAvatar}" class="message-sender-avatar" alt="${senderName}" title="${senderName}">
+          <div style="display: flex; flex-direction: column; align-items: flex-start; max-width: 65%;">
+            <span class="message-sender-name">${senderName}</span>
+            <div style="display: flex; align-items: center; gap: 8px; justify-content: flex-start; width: 100%; position: relative;" class="message-bubble-wrapper">
+              ${swipeIndicatorHtml}
+              ${groupBubbleHtml}
+              ${optionsHtml}
+              ${dropdownHtml}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    const rowAlign = isOutgoing ? 'align-items: flex-end;' : 'align-items: flex-start;';
+    const standardOptionsHtml = displayOptions ? `
+      <div class="message-options-dropdown">
+        <button class="btn-message-options desktop-msg-options" data-id="${msg.id}" title="${t('options')}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="1.5"></circle>
+            <circle cx="12" cy="5" r="1.5"></circle>
+            <circle cx="12" cy="19" r="1.5"></circle>
+          </svg>
+        </button>
+      </div>
+    ` : '';
+
+    const dropdownHtml = displayOptions ? `
+      <div class="message-dropdown-menu" id="dropdown-${msg.id}" style="display: none; ${isOutgoing ? 'right: 0px !important; left: auto !important;' : 'left: 0px !important; right: auto !important;'} bottom: 0px !important; top: auto !important; margin-bottom: 0px !important;">
+        <div class="reaction-picker-row" style="display: flex; gap: 6px; padding: 6px 8px; border-bottom: 1px solid var(--border-color); justify-content: space-around;">
+          <button class="reaction-emoji-btn" data-id="${msg.id}" data-reaction="LIKE" style="background: none; border: none; font-size: 1.15rem; cursor: pointer; padding: 2px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'" title="Like">👍</button>
+          <button class="reaction-emoji-btn" data-id="${msg.id}" data-reaction="HEART" style="background: none; border: none; font-size: 1.15rem; cursor: pointer; padding: 2px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'" title="Heart">❤️</button>
+          <button class="reaction-emoji-btn" data-id="${msg.id}" data-reaction="HAHA" style="background: none; border: none; font-size: 1.15rem; cursor: pointer; padding: 2px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'" title="Haha">😆</button>
+          <button class="reaction-emoji-btn" data-id="${msg.id}" data-reaction="WOW" style="background: none; border: none; font-size: 1.15rem; cursor: pointer; padding: 2px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'" title="Wow">😮</button>
+          <button class="reaction-emoji-btn" data-id="${msg.id}" data-reaction="SAD" style="background: none; border: none; font-size: 1.15rem; cursor: pointer; padding: 2px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'" title="Sad">😢</button>
+          <button class="reaction-emoji-btn" data-id="${msg.id}" data-reaction="ANGRY" style="background: none; border: none; font-size: 1.15rem; cursor: pointer; padding: 2px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'" title="Angry">😡</button>
+          <button class="reaction-emoji-btn" data-id="${msg.id}" data-reaction="CARE" style="background: none; border: none; font-size: 1.15rem; cursor: pointer; padding: 2px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'" title="Care">🥰</button>
+          <button class="reaction-emoji-btn" data-id="${msg.id}" data-reaction="CLAP" style="background: none; border: none; font-size: 1.15rem; cursor: pointer; padding: 2px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'" title="Clap">👏</button>
+          <button class="reaction-emoji-btn" data-id="${msg.id}" data-reaction="FIRE" style="background: none; border: none; font-size: 1.15rem; cursor: pointer; padding: 2px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'" title="Fire">🔥</button>
+        </div>
+        <button class="dropdown-item btn-reply-message" data-id="${msg.id}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; color: var(--accent-color);">
+            <polyline points="9 17 4 12 9 7"></polyline>
+            <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
+          </svg>
+          <span>${t('reply')}</span>
+        </button>
+        <button class="dropdown-item btn-remove-reaction" data-id="${msg.id}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; color: var(--text-muted);">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="15" y1="9" x2="9" y2="15"></line>
+          </svg>
+          <span>${t('remove_reaction')}</span>
+        </button>
+        ${isOutgoing ? `
+          <button class="dropdown-item btn-revoke-message" data-id="${msg.id}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; color: var(--error);">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="15" y1="9" x2="9" y2="15"></line>
+              <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
+            <span style="color: var(--error);">${t('revoke')}</span>
+          </button>
+        ` : ''}
       </div>
     ` : '';
 
@@ -268,29 +394,58 @@ export function renderMessages(messages, conversationId, conversations = []) {
       </div>
     `;
 
-    const bubbleHtml = `<div class="${bubbleClass}" data-id="${msg.id}" data-seen-by="${seenNamesStr}">${replyQuoteHtml}${contentHtml}<div class="message-time" style="font-size: 0.7rem; text-align: right; opacity: 0.7; margin-top: 4px; white-space: normal;">${msg.time}</div></div>`;
+    const reactionsHtml = getReactionsHtml(msg.reactorCount, isOutgoing, msg.id);
+    const hasReactions = msg.reactorCount && Object.values(msg.reactorCount).some(c => c > 0);
+    const wrapperMarginStyle = hasReactions ? 'margin-bottom: 12px;' : '';
+
+    const bubbleHtml = `
+      <div class="message-wrapper-container" style="${wrapperMarginStyle}">
+        <div class="${bubbleClass}" data-id="${msg.id}" data-seen-by="${seenNamesStr}" data-created-at="${msg.createdAt || ''}" style="width: 100%; max-width: 100% !important;">
+          ${replyQuoteHtml}
+          ${contentHtml}
+          <div class="message-time" style="font-size: 0.7rem; text-align: right; opacity: 0.7; margin-top: 4px; white-space: normal;">${msg.time}</div>
+        </div>
+        ${reactionsHtml}
+      </div>
+    `;
 
     return `
       <div class="message-row" id="msg-${msg.id}" style="display: flex; flex-direction: column; ${rowAlign} width: 100%;">
         <div style="display: flex; align-items: center; gap: 8px; justify-content: ${isOutgoing ? 'flex-end' : 'flex-start'}; width: 100%; position: relative;" class="message-bubble-wrapper">
           ${swipeIndicatorHtml}
-          ${isOutgoing ? `${optionsHtml}${bubbleHtml}` : `${bubbleHtml}${optionsHtml}`}
+          ${isOutgoing ? `${standardOptionsHtml}${bubbleHtml}` : `${bubbleHtml}${standardOptionsHtml}`}
+          ${dropdownHtml}
         </div>
         ${statusTextHtml}
       </div>
     `;
   }).join('');
 
-  // Helper function to show who read the message inline
-  const showSeenInline = (bubbleElement) => {
-    const seenBy = bubbleElement.dataset.seenBy;
-    if (!seenBy) return;
-
+  // Helper function to show who read the message and specific time inline
+  const showMessageDetailsInline = (bubbleElement) => {
     // Clear any existing inline status
     msgContainer.querySelectorAll('.message-click-status').forEach(el => el.remove());
 
     const wrapper = bubbleElement.closest('.message-bubble-wrapper');
     if (!wrapper) return;
+
+    const createdAt = bubbleElement.dataset.createdAt;
+    let detailText = '';
+    if (createdAt) {
+      const specificTime = formatSpecificTime(createdAt);
+      detailText = specificTime;
+    }
+
+    const seenBy = bubbleElement.dataset.seenBy;
+    if (seenBy) {
+      if (detailText) {
+        detailText += ` • ${t('seen_by')}${seenBy}`;
+      } else {
+        detailText = `${t('seen_by')}${seenBy}`;
+      }
+    }
+
+    if (!detailText) return;
 
     const detailDiv = document.createElement('div');
     detailDiv.className = 'message-click-status';
@@ -299,7 +454,11 @@ export function renderMessages(messages, conversationId, conversations = []) {
     detailDiv.style.alignSelf = isOutgoing ? 'flex-end' : 'flex-start';
     detailDiv.style.marginRight = isOutgoing ? '8px' : '0px';
     detailDiv.style.marginLeft = isOutgoing ? '0px' : '8px';
-    detailDiv.textContent = `${t('seen_by')}${seenBy}`;
+    detailDiv.style.fontSize = '0.75rem';
+    detailDiv.style.color = 'var(--text-secondary)';
+    detailDiv.style.opacity = '0.85';
+    detailDiv.style.marginTop = '4px';
+    detailDiv.textContent = detailText;
 
     wrapper.insertAdjacentElement('afterend', detailDiv);
 
@@ -410,10 +569,27 @@ export function renderMessages(messages, conversationId, conversations = []) {
       openMsgDropdown(messageId);
     });
 
-    // Click on message bubble to see who read it inline (no popup dialog anymore)
+    // Double tap to HEART reaction, single click to see who read it inline
+    let lastTap = 0;
     bubble.addEventListener('click', (e) => {
       if (e.target.closest('a, button, audio, video, img')) return;
-      showSeenInline(bubble);
+      
+      const now = Date.now();
+      const DOUBLE_TAP_DELAY = 300;
+      if (now - lastTap < DOUBLE_TAP_DELAY) {
+        e.stopPropagation();
+        e.preventDefault();
+        
+        // Double tap: send HEART reaction
+        socket.sendReaction(messageId, 'HEART');
+        
+        // Remove seen status if shown
+        msgContainer.querySelectorAll('.message-click-status').forEach(el => el.remove());
+        lastTap = 0;
+        return;
+      }
+      lastTap = now;
+      showMessageDetailsInline(bubble);
     });
   });
 
@@ -424,7 +600,7 @@ export function renderMessages(messages, conversationId, conversations = []) {
       e.stopPropagation();
       const bubble = container.parentElement?.querySelector('.message-bubble');
       if (bubble) {
-        showSeenInline(bubble);
+        showMessageDetailsInline(bubble);
       }
     });
   });
@@ -455,6 +631,55 @@ export function renderMessages(messages, conversationId, conversations = []) {
       if (targetId) {
         const event = new CustomEvent('reply-quote-click', { detail: { targetId } });
         document.dispatchEvent(event);
+      }
+    });
+  });
+
+  // Bind click event on reaction emoji buttons
+  const reactionBtns = msgContainer.querySelectorAll('.reaction-emoji-btn');
+  reactionBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const messageId = btn.dataset.id;
+      const reactionType = btn.dataset.reaction;
+
+      // Close dropdown immediately
+      const dropdown = document.getElementById(`dropdown-${messageId}`);
+      if (dropdown) dropdown.style.display = 'none';
+
+      if (messageId && reactionType) {
+        socket.sendReaction(messageId, reactionType);
+      }
+    });
+  });
+
+  // Bind click event on existing reaction pills to show the reactors list modal
+  const reactionPills = msgContainer.querySelectorAll('.reaction-pill-item');
+  reactionPills.forEach(pill => {
+    pill.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const messageId = pill.dataset.messageId;
+      if (messageId) {
+        import('../modals/reactions-modal.js').then(({ showReactionsModal }) => {
+          showReactionsModal(messageId, conversationId, conversations);
+        });
+      }
+    });
+  });
+
+  // Bind click event on remove reaction buttons
+  const removeReactionBtns = msgContainer.querySelectorAll('.btn-remove-reaction');
+  removeReactionBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const messageId = btn.dataset.id;
+
+      // Close dropdown immediately
+      const dropdown = document.getElementById(`dropdown-${messageId}`);
+      if (dropdown) dropdown.style.display = 'none';
+
+      if (messageId) {
+        socket.sendUnreaction(messageId);
       }
     });
   });

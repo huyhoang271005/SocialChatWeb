@@ -119,12 +119,16 @@ export function showAddMemberModal(conversationId, conversations) {
     const loadMoreContainer = overlay.querySelector('#modal-load-more-container');
 
     if (usersListContainer && (usersList.length === 0 || !nextPage)) {
-      usersListContainer.innerHTML = `
-        <div class="list-fallback-state" style="padding: 20px; text-align: center; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; justify-content: center;">
-          <div class="spinner-sm" style="margin-bottom: 8px;"></div>
-          ${t('loading_list')}
+      usersListContainer.innerHTML = Array(3).fill(0).map(() => `
+        <div class="user-list-card-skeleton" style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: hsla(230, 25%, 6%, 0.25);">
+          <div class="skeleton-loader skeleton-circle" style="width: 20px; height: 20px; flex-shrink: 0;"></div>
+          <div class="skeleton-loader skeleton-circle" style="width: 38px; height: 38px; flex-shrink: 0;"></div>
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+            <div class="skeleton-loader skeleton-text" style="width: 50%; height: 12px; margin-bottom: 0;"></div>
+            <div class="skeleton-loader skeleton-text" style="width: 30%; height: 10px; margin-bottom: 0;"></div>
+          </div>
         </div>
-      `;
+      `).join('');
     }
 
     try {

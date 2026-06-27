@@ -7,6 +7,10 @@ export function showEditConversationModal(conversationId, conversations) {
   const convo = conversations.find(c => String(c.conversationId) === String(conversationId));
   if (!convo) return;
 
+  const rolesCanChat = convo.rolesCanChat && Array.isArray(convo.rolesCanChat)
+    ? convo.rolesCanChat.map(r => String(r).toUpperCase())
+    : ['CREATOR', 'ADMIN', 'MEMBER'];
+
   const currentTitle = convo.title || t('group_chat_prefix') + ' #' + convo.conversationId;
   const currentUserId = localStorage.getItem('chat_user_id');
   const avatarHtml = getAvatarHtml(convo, currentUserId, 'edit-avatar-preview', currentTitle, convo.conversationAvatarUrl);
@@ -59,6 +63,23 @@ export function showEditConversationModal(conversationId, conversations) {
           <div class="form-group">
             <label class="form-label" for="edit-chat-title-input" style="font-size: 0.8rem; margin-bottom: 4px;">${t('group_name_label')}</label>
             <input type="text" id="edit-chat-title-input" class="form-input" placeholder="${t('group_name_placeholder')}" value="${currentTitle}" style="font-size: 0.85rem; padding: 8px 12px; height: 38px;">
+          </div>
+          <div class="form-group" style="margin-top: 5px;">
+            <label class="form-label" style="font-size: 0.8rem; margin-bottom: 8px;">${t('roles_can_chat_label')}</label>
+            <div style="display: flex; flex-direction: column; gap: 8px; background: hsla(230, 25%, 6%, 0.25); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px;">
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer; color: var(--text-primary);">
+                <input type="checkbox" id="role-can-chat-creator" value="CREATOR" ${rolesCanChat.includes('CREATOR') ? 'checked' : ''} style="cursor: pointer;">
+                <span>${t('role_creator')} (CREATOR)</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer; color: var(--text-primary);">
+                <input type="checkbox" id="role-can-chat-admin" value="ADMIN" ${rolesCanChat.includes('ADMIN') ? 'checked' : ''} style="cursor: pointer;">
+                <span>${t('role_admin')} (ADMIN)</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer; color: var(--text-primary);">
+                <input type="checkbox" id="role-can-chat-member" value="MEMBER" ${rolesCanChat.includes('MEMBER') ? 'checked' : ''} style="cursor: pointer;">
+                <span>${t('role_member')} (MEMBER)</span>
+              </label>
+            </div>
           </div>
         </form>
       </div>
@@ -152,11 +173,17 @@ export function showEditConversationModal(conversationId, conversations) {
       }
     }
 
+    const selectedRoles = [];
+    if (overlay.querySelector('#role-can-chat-creator').checked) selectedRoles.push('CREATOR');
+    if (overlay.querySelector('#role-can-chat-admin').checked) selectedRoles.push('ADMIN');
+    if (overlay.querySelector('#role-can-chat-member').checked) selectedRoles.push('MEMBER');
+
     const payload = {
       conversationId: convo.conversationId,
       title: newTitle,
       conversationAvatarUrl: finalAvatarUrl,
-      conversationAvatarId: finalAvatarId
+      conversationAvatarId: finalAvatarId,
+      rolesCanChat: selectedRoles
     };
 
     try {
@@ -175,6 +202,7 @@ export function showEditConversationModal(conversationId, conversations) {
         convo.title = newTitle;
         convo.conversationAvatarUrl = finalAvatarUrl;
         convo.conversationAvatarId = finalAvatarId;
+        convo.rolesCanChat = selectedRoles;
 
         document.dispatchEvent(new CustomEvent('refresh-conversations'));
 

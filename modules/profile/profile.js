@@ -29,9 +29,59 @@ export const ProfileView = {
         </div>
 
         <div id="profile-content-mount">
-          <div class="profile-loading-state">
-            <div class="spinner"></div>
-            <p>${t('loading_profile')}</p>
+          <div class="profile-container-grid" style="opacity: 0.85;">
+            <!-- Left Column: Main profile card skeleton -->
+            <div class="profile-card main-info-card">
+              <div class="profile-card-cover skeleton-loader" style="height: 80px; border-radius: var(--radius-lg) var(--radius-lg) 0 0;"></div>
+              <div class="profile-avatar-container" style="margin-top: -40px; text-align: center;">
+                <div class="skeleton-loader skeleton-circle" style="width: 80px; height: 80px; border: 4px solid var(--bg-secondary); margin: 0 auto;"></div>
+              </div>
+              <div class="profile-basic-details" style="display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 10px;">
+                <div class="skeleton-loader skeleton-text" style="width: 50%; height: 16px; margin-bottom: 0;"></div>
+                <div class="skeleton-loader skeleton-text" style="width: 30%; height: 12px; margin-bottom: 0;"></div>
+                <div style="display: flex; gap: 8px; justify-content: center; width: 100%; margin-top: 4px;">
+                  <div class="skeleton-loader" style="width: 60px; height: 20px; border-radius: var(--radius-sm);"></div>
+                  <div class="skeleton-loader" style="width: 80px; height: 20px; border-radius: var(--radius-sm);"></div>
+                </div>
+                <div class="skeleton-loader skeleton-text" style="width: 40%; height: 14px; margin-top: 8px; margin-bottom: 0;"></div>
+                <div class="skeleton-loader" style="width: 120px; height: 36px; border-radius: var(--radius-sm); margin-top: 15px;"></div>
+              </div>
+            </div>
+
+            <!-- Right Column: Personal details skeleton -->
+            <div class="profile-card details-card" style="display: flex; flex-direction: column; gap: 12px;">
+              <div class="skeleton-loader skeleton-text" style="width: 35%; height: 14px; margin-bottom: 8px;"></div>
+              ${Array(3).fill(0).map(() => `
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                  <div class="skeleton-loader skeleton-text" style="width: 30%; height: 10px; margin-bottom: 0;"></div>
+                  <div class="skeleton-loader skeleton-text" style="width: 50%; height: 12px; margin-bottom: 0;"></div>
+                </div>
+              `).join('')}
+            </div>
+
+            <!-- Associated Emails skeleton -->
+            <div class="profile-card emails-card" style="display: flex; flex-direction: column; gap: 12px;">
+              <div class="skeleton-loader skeleton-text" style="width: 45%; height: 14px; margin-bottom: 8px;"></div>
+              ${Array(2).fill(0).map(() => `
+                <div style="display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 8px 12px;">
+                  <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+                    <div class="skeleton-loader skeleton-text" style="width: 60%; height: 12px; margin-bottom: 0;"></div>
+                    <div class="skeleton-loader skeleton-text" style="width: 40%; height: 10px; margin-bottom: 0;"></div>
+                  </div>
+                  <div class="skeleton-loader" style="width: 70px; height: 18px; border-radius: var(--radius-sm);"></div>
+                </div>
+              `).join('')}
+            </div>
+
+            <!-- Role & Permissions skeleton -->
+            <div class="profile-card permissions-card" style="display: flex; flex-direction: column; gap: 12px;">
+              <div class="skeleton-loader skeleton-text" style="width: 40%; height: 14px; margin-bottom: 8px;"></div>
+              <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                ${Array(4).fill(0).map(() => `
+                  <div class="skeleton-loader" style="width: 70px; height: 22px; border-radius: var(--radius-sm);"></div>
+                `).join('')}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -53,9 +103,59 @@ export const ProfileView = {
     // Show initial loading if it is the first time we load data
     if (this.loading && !this.profile) {
       mountPoint.innerHTML = `
-        <div class="profile-loading-state">
-          <div class="spinner"></div>
-          <p>${t('loading_profile')}</p>
+        <div class="profile-container-grid" style="opacity: 0.85;">
+          <!-- Left Column: Main profile card skeleton -->
+          <div class="profile-card main-info-card">
+            <div class="profile-card-cover skeleton-loader" style="height: 80px; border-radius: var(--radius-lg) var(--radius-lg) 0 0;"></div>
+            <div class="profile-avatar-container" style="margin-top: -40px; text-align: center;">
+              <div class="skeleton-loader skeleton-circle" style="width: 80px; height: 80px; border: 4px solid var(--bg-secondary); margin: 0 auto;"></div>
+            </div>
+            <div class="profile-basic-details" style="display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 10px;">
+              <div class="skeleton-loader skeleton-text" style="width: 50%; height: 16px; margin-bottom: 0;"></div>
+              <div class="skeleton-loader skeleton-text" style="width: 30%; height: 12px; margin-bottom: 0;"></div>
+              <div style="display: flex; gap: 8px; justify-content: center; width: 100%; margin-top: 4px;">
+                <div class="skeleton-loader" style="width: 60px; height: 20px; border-radius: var(--radius-sm);"></div>
+                <div class="skeleton-loader" style="width: 80px; height: 20px; border-radius: var(--radius-sm);"></div>
+              </div>
+              <div class="skeleton-loader skeleton-text" style="width: 40%; height: 14px; margin-top: 8px; margin-bottom: 0;"></div>
+              <div class="skeleton-loader" style="width: 120px; height: 36px; border-radius: var(--radius-sm); margin-top: 15px;"></div>
+            </div>
+          </div>
+
+          <!-- Right Column: Personal details skeleton -->
+          <div class="profile-card details-card" style="display: flex; flex-direction: column; gap: 12px;">
+            <div class="skeleton-loader skeleton-text" style="width: 35%; height: 14px; margin-bottom: 8px;"></div>
+            ${Array(3).fill(0).map(() => `
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                <div class="skeleton-loader skeleton-text" style="width: 30%; height: 10px; margin-bottom: 0;"></div>
+                <div class="skeleton-loader skeleton-text" style="width: 50%; height: 12px; margin-bottom: 0;"></div>
+              </div>
+            `).join('')}
+          </div>
+
+          <!-- Associated Emails skeleton -->
+          <div class="profile-card emails-card" style="display: flex; flex-direction: column; gap: 12px;">
+            <div class="skeleton-loader skeleton-text" style="width: 45%; height: 14px; margin-bottom: 8px;"></div>
+            ${Array(2).fill(0).map(() => `
+              <div style="display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 8px 12px;">
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+                  <div class="skeleton-loader skeleton-text" style="width: 60%; height: 12px; margin-bottom: 0;"></div>
+                  <div class="skeleton-loader skeleton-text" style="width: 40%; height: 10px; margin-bottom: 0;"></div>
+                </div>
+                <div class="skeleton-loader" style="width: 70px; height: 18px; border-radius: var(--radius-sm);"></div>
+              </div>
+            `).join('')}
+          </div>
+
+          <!-- Role & Permissions skeleton -->
+          <div class="profile-card permissions-card" style="display: flex; flex-direction: column; gap: 12px;">
+            <div class="skeleton-loader skeleton-text" style="width: 40%; height: 14px; margin-bottom: 8px;"></div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+              ${Array(4).fill(0).map(() => `
+                <div class="skeleton-loader" style="width: 70px; height: 22px; border-radius: var(--radius-sm);"></div>
+              `).join('')}
+            </div>
+          </div>
         </div>
       `;
     }

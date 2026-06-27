@@ -1,4 +1,5 @@
 import { t, formatSystemMessage } from '../../../../js/core/i18n.js';
+import { formatMessageTime } from '../handlers/socket-event-handler.js';
 
 
 function formatLastMessageText(text) {
@@ -191,12 +192,7 @@ export function renderConversationsList(conversations, activeConversationId, get
     // Last message time
     let timeStr = '';
     if (convo.lastMessageTime) {
-      try {
-        const d = new Date(convo.lastMessageTime);
-        timeStr = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-      } catch (e) {
-        timeStr = '';
-      }
+      timeStr = formatMessageTime(convo.lastMessageTime);
     }
 
     const myUserConvo = convo.userConversations?.find(u => String(u.userId) === String(currentUserId));
@@ -260,14 +256,6 @@ export function renderConversationsList(conversations, activeConversationId, get
                       <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                     </svg>
                     <span style="color: var(--error);">${t('delete')}</span>
-                  </button>
-                  <button class="dropdown-item btn-disband-convo" data-id="${convo.conversationId}">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; color: var(--error);">
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <line x1="15" y1="9" x2="9" y2="15"></line>
-                      <line x1="9" y1="9" x2="15" y2="15"></line>
-                    </svg>
-                    <span style="color: var(--error);">${t('disband')}</span>
                   </button>
                 </div>
               </div>
@@ -445,32 +433,4 @@ export function renderConversationsList(conversations, activeConversationId, get
     });
   });
 
-  // Bind disband events
-  const disbandBtns = listContainer.querySelectorAll('.btn-disband-convo');
-  disbandBtns.forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const convoId = btn.dataset.id;
-
-      // Close dropdown immediately
-      const dropdown = document.getElementById(`convo-dropdown-${convoId}`);
-      if (dropdown) dropdown.style.display = 'none';
-
-      if (disbandConversationCallback) {
-        const { showDialog } = await import('../../../../js/shared/dialog/dialog.js');
-        const confirm = await showDialog({
-          title: t('disband_convo_title'),
-          message: t('disband_convo_msg'),
-          type: 'warning',
-          buttons: [
-            { text: t('logout_cancel'), type: 'secondary', value: false },
-            { text: t('disband'), type: 'danger', value: true }
-          ]
-        });
-        if (confirm) {
-          disbandConversationCallback(convoId);
-        }
-      }
-    });
-  });
 }

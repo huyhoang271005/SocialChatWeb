@@ -1,5 +1,6 @@
 import { api } from '../../../../js/core/api.js';
 import { t, formatSystemMessage } from '../../../../js/core/i18n.js';
+import { formatMessageTime } from './socket-event-handler.js';
 
 export const MessageLoader = {
   async loadMessages(ctx, conversationId, nextPage = false, forceRefresh = false) {
@@ -80,20 +81,16 @@ export const MessageLoader = {
             senderId: senderId,
             text: isRevoked ? t('revoked_msg') : textVal,
             type: msg.type || 'TEXT',
-            time: (() => {
-              if (!msg.createdAt) return new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-              const d = new Date(msg.createdAt);
-              return !isNaN(d.getTime()) 
-                ? d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-                : String(msg.createdAt);
-            })(),
+            time: formatMessageTime(msg.createdAt),
             status: 'sent',
             isRevoked: isRevoked,
             replyMessageId: msg.replyMessageId || null,
             replyText: msg.replyText || null,
             replyType: msg.replyType || null,
             replyRevoked: msg.replyRevoked === true,
-            rawText: isSystemMsg ? rawTextVal : undefined
+            rawText: isSystemMsg ? rawTextVal : undefined,
+            reactorCount: msg.reactorCount || msg.reactionCount || null,
+            createdAt: msg.createdAt
           };
         });
 

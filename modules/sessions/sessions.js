@@ -25,9 +25,28 @@ export const SessionsView = {
         </div>
 
         <div id="sessions-list-mount">
-          <div class="sessions-loading-state">
-            <div class="spinner"></div>
-            <p>${t('loading_sessions_list')}</p>
+          <div class="sessions-list" style="display: flex; flex-direction: column; gap: 16px;">
+            ${Array(3).fill(0).map(() => `
+              <div class="session-card" style="display: flex; align-items: center; justify-content: space-between; padding: 16px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: hsla(230, 25%, 6%, 0.25);">
+                <div style="display: flex; align-items: center; gap: 16px; flex: 1;">
+                  <div class="skeleton-loader skeleton-circle" style="width: 44px; height: 44px; flex-shrink: 0;"></div>
+                  <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                      <div class="skeleton-loader skeleton-text" style="width: 30%; height: 14px; margin-bottom: 0;"></div>
+                      <div class="skeleton-loader" style="width: 50px; height: 16px; border-radius: var(--radius-sm);"></div>
+                    </div>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                      <div class="skeleton-loader skeleton-text" style="width: 25%; height: 10px; margin-bottom: 0;"></div>
+                      <div class="skeleton-loader skeleton-text" style="width: 20%; height: 10px; margin-bottom: 0;"></div>
+                    </div>
+                  </div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                  <div class="skeleton-loader skeleton-circle" style="width: 34px; height: 34px;"></div>
+                  <div class="skeleton-loader skeleton-circle" style="width: 34px; height: 34px;"></div>
+                </div>
+              </div>
+            `).join('')}
           </div>
         </div>
 
@@ -54,9 +73,28 @@ export const SessionsView = {
     const listMount = document.getElementById('sessions-list-mount');
     if (!nextPage && listMount) {
       listMount.innerHTML = `
-        <div class="sessions-loading-state">
-          <div class="spinner"></div>
-          <p>${t('loading_sessions_list')}</p>
+        <div class="sessions-list" style="display: flex; flex-direction: column; gap: 16px;">
+          ${Array(3).fill(0).map(() => `
+            <div class="session-card" style="display: flex; align-items: center; justify-content: space-between; padding: 16px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: hsla(230, 25%, 6%, 0.25);">
+              <div style="display: flex; align-items: center; gap: 16px; flex: 1;">
+                <div class="skeleton-loader skeleton-circle" style="width: 44px; height: 44px; flex-shrink: 0;"></div>
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+                  <div style="display: flex; gap: 8px; align-items: center;">
+                    <div class="skeleton-loader skeleton-text" style="width: 30%; height: 14px; margin-bottom: 0;"></div>
+                    <div class="skeleton-loader" style="width: 50px; height: 16px; border-radius: var(--radius-sm);"></div>
+                  </div>
+                  <div style="display: flex; gap: 12px; align-items: center;">
+                    <div class="skeleton-loader skeleton-text" style="width: 25%; height: 10px; margin-bottom: 0;"></div>
+                    <div class="skeleton-loader skeleton-text" style="width: 20%; height: 10px; margin-bottom: 0;"></div>
+                  </div>
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <div class="skeleton-loader skeleton-circle" style="width: 34px; height: 34px;"></div>
+                <div class="skeleton-loader skeleton-circle" style="width: 34px; height: 34px;"></div>
+              </div>
+            </div>
+          `).join('')}
         </div>
       `;
     }
@@ -520,9 +558,19 @@ export const SessionsView = {
         this.renderVerifications(session, container);
       } else {
         container.innerHTML = `
-          <div class="verifications-loading-state">
-            <div class="spinner-sm"></div>
-            <p style="margin-top: 8px;">${t('loading_verification_history')}</p>
+          <div class="verifications-list" style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px; padding: 10px; background: hsla(230, 25%, 4%, 0.15); border-radius: var(--radius-md);">
+            ${Array(2).fill(0).map(() => `
+              <div class="verification-row" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px;">
+                <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                  <div class="skeleton-loader skeleton-circle" style="width: 28px; height: 28px; flex-shrink: 0;"></div>
+                  <div style="display: flex; flex-direction: column; gap: 6px; flex: 1;">
+                    <div class="skeleton-loader skeleton-text" style="width: 40%; height: 12px; margin-bottom: 0;"></div>
+                    <div class="skeleton-loader skeleton-text" style="width: 60%; height: 10px; margin-bottom: 0;"></div>
+                  </div>
+                </div>
+                <div class="skeleton-loader" style="width: 70px; height: 18px; border-radius: var(--radius-sm);"></div>
+              </div>
+            `).join('')}
           </div>
         `;
 

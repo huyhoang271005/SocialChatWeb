@@ -60,10 +60,18 @@ export const HomeView = {
           </div>
 
           <div class="conversations-list" id="conversations-list-container">
-            <div class="list-fallback-state" style="padding: 20px; text-align: center;">
-              <div class="spinner-sm" style="margin: 0 auto 8px;"></div>
-              ${t('loading_list')}
-            </div>
+            ${Array(5).fill(0).map(() => `
+              <div class="conversation-item-skeleton">
+                <div class="skeleton-loader skeleton-circle" style="width: 40px; height: 40px; flex-shrink: 0;"></div>
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    <div class="skeleton-loader skeleton-text" style="width: 50%; height: 12px; margin-bottom: 0;"></div>
+                    <div class="skeleton-loader skeleton-text" style="width: 15%; height: 10px; margin-bottom: 0;"></div>
+                  </div>
+                  <div class="skeleton-loader skeleton-text" style="width: 80%; height: 10px; margin-bottom: 0;"></div>
+                </div>
+              </div>
+            `).join('')}
           </div>
         </div>
 
@@ -140,6 +148,15 @@ export const HomeView = {
                 <button id="btn-cancel-voice-preview" class="btn btn-secondary" style="width: auto; height: 32px; padding: 0 12px; font-size: 0.85rem; border-color: rgba(239, 68, 68, 0.4); color: #ef4444; background: rgba(239, 68, 68, 0.05); border-radius: var(--radius-sm); font-weight: 500;">${t('voice_preview_cancel')}</button>
                 <button id="btn-send-voice-preview" class="btn btn-primary" style="width: auto; height: 32px; padding: 0 12px; font-size: 0.85rem; border-radius: var(--radius-sm); font-weight: 500;">${t('voice_preview_send')}</button>
               </div>
+            </div>
+
+            <!-- Restricted Chat Banner -->
+            <div id="restricted-chat-banner" class="restricted-chat-banner" style="display: none; align-items: center; justify-content: center; padding: 12px; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: var(--radius-md); color: #ef4444; font-size: 0.9rem; font-weight: 500; text-align: center; gap: 8px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              <span>${t('restricted_chat')}</span>
             </div>
 
             <!-- Input actions row -->
@@ -510,6 +527,33 @@ export const HomeView = {
     };
     document.addEventListener('refresh-conversations', this.refreshConversationsListener);
 
+    // Setup listener for custom disband-conversation event
+    this.disbandConversationListener = (e) => {
+      const convoId = e.detail?.conversationId;
+      if (convoId) {
+        this.disbandConversation(convoId);
+      }
+    };
+    document.addEventListener('disband-conversation', this.disbandConversationListener);
+
+    // Setup listener for custom left-conversation event
+    this.leftConversationListener = (e) => {
+      const convoId = e.detail?.conversationId;
+      if (convoId) {
+        // Clear local cached messages and remove conversation from sidebar list
+        sessionStorage.removeItem(`chat_messages_cache_${convoId}`);
+        this.conversations = this.conversations.filter(c => String(c.conversationId) !== String(convoId));
+        this.renderConversationsList();
+
+        if (String(this.conversationId) === String(convoId)) {
+          this.conversationId = null;
+          this.messages = [];
+          this.renderEmptyChatFrame();
+        }
+      }
+    };
+    document.addEventListener('left-conversation', this.leftConversationListener);
+
     // 2. Tải danh sách cuộc hội thoại
     let initialConversationId = queryParams && (queryParams.conversationId || queryParams.id);
     await this.loadConversations(true, initialConversationId);
@@ -543,21 +587,30 @@ export const HomeView = {
       }
     };
 
-    socket.onConnectCallback = () => {
+    socket.onConnectCallback = async () => {
       updateConnectionStatus(true);
-      OfflineQueueHandler.processOfflineQueue(this);
 
       if (this.wasDisconnected) {
         clearSessionCaches();
         this.wasDisconnected = false;
       }
 
-      // Refresh conversations list on connect/reconnect
-      this.loadConversations(false, null, false, true);
-      // Tải lại tin nhắn mới nhất để đồng bộ sau khi kết nối
-      if (this.conversationId) {
-        this.loadMessages(this.conversationId, false, true);
+      // Refresh conversations list and messages on connect/reconnect
+      try {
+        await this.loadConversations(false, null, false, true);
+        if (this.conversationId) {
+          const activeConvo = this.conversations.find(c => String(c.conversationId) === String(this.conversationId));
+          if (activeConvo) {
+            ConversationHandler.updateChatInputRestriction(this, activeConvo);
+          }
+          await this.loadMessages(this.conversationId, false, true);
+        }
+      } catch (err) {
+        console.warn('Failed to refresh data on reconnect:', err);
       }
+
+      // Send any unsent messages after data is successfully updated
+      OfflineQueueHandler.processOfflineQueue(this);
     };
     socket.onDisconnectCallback = () => {
       updateConnectionStatus(false);
@@ -566,21 +619,30 @@ export const HomeView = {
 
     this.syncIntervalId = setInterval(() => OfflineQueueHandler.processOfflineQueue(this), 4000);
 
-    this.handleOnlineStatus = () => {
+    this.handleOnlineStatus = async () => {
       updateConnectionStatus(true);
-      OfflineQueueHandler.processOfflineQueue(this);
 
       if (this.wasDisconnected) {
         clearSessionCaches();
         this.wasDisconnected = false;
       }
 
-      // Refresh conversations list on connect/reconnect
-      this.loadConversations(false, null, false, true);
-      // Tải lại tin nhắn mới nhất để đồng bộ sau khi kết nối lại
-      if (this.conversationId) {
-        this.loadMessages(this.conversationId, false, true);
+      // Refresh conversations list and messages on connect/reconnect
+      try {
+        await this.loadConversations(false, null, false, true);
+        if (this.conversationId) {
+          const activeConvo = this.conversations.find(c => String(c.conversationId) === String(this.conversationId));
+          if (activeConvo) {
+            ConversationHandler.updateChatInputRestriction(this, activeConvo);
+          }
+          await this.loadMessages(this.conversationId, false, true);
+        }
+      } catch (err) {
+        console.warn('Failed to refresh data on online event:', err);
       }
+
+      // Send any unsent messages after data is successfully updated
+      OfflineQueueHandler.processOfflineQueue(this);
     };
     this.handleOfflineStatus = () => {
       updateConnectionStatus(false);
@@ -670,7 +732,20 @@ export const HomeView = {
           }
 
           const title = payload.notification?.title || payload.data?.title || t('new_notification');
-          const body = payload.notification?.body || payload.data?.body || t('new_message_alert');
+          let body = payload.notification?.body || payload.data?.body || t('new_message_alert');
+          const messageType = payload.data?.messageType;
+          if (messageType && messageType !== 'TEXT') {
+            const type = String(messageType).toUpperCase();
+            if (type === 'IMAGE') {
+              body = t('snippet_image');
+            } else if (type === 'VIDEO') {
+              body = t('snippet_video');
+            } else if (type === 'AUDIO') {
+              body = t('snippet_audio');
+            } else if (type === 'FILE') {
+              body = t('snippet_file');
+            }
+          }
           const conversationId = payload.data?.conversationId || payload.data?.id;
           const messageId = payload.data?.messageId;
           const tag = payload.data?.tag || payload.notification?.tag;
@@ -1121,6 +1196,14 @@ export const HomeView = {
     if (this.refreshConversationsListener) {
       document.removeEventListener('refresh-conversations', this.refreshConversationsListener);
       this.refreshConversationsListener = null;
+    }
+    if (this.disbandConversationListener) {
+      document.removeEventListener('disband-conversation', this.disbandConversationListener);
+      this.disbandConversationListener = null;
+    }
+    if (this.leftConversationListener) {
+      document.removeEventListener('left-conversation', this.leftConversationListener);
+      this.leftConversationListener = null;
     }
     
     // Clean up reply listeners

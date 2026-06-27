@@ -38,7 +38,7 @@ export function updateChatHeader(title, avatarUrl, statusText, conversationId = 
       const currentUserId = String(localStorage.getItem('chat_user_id'));
       const myConvoEntry = convo?.userConversations?.find(u => String(u.userId) === currentUserId);
       const myRole = myConvoEntry ? String(myConvoEntry.conversationRole || 'MEMBER').toUpperCase() : 'MEMBER';
-      const canAddMember = !convo || !convo.group || myRole === 'CREATOR';
+      const canAddMember = !convo || !convo.group || myRole === 'CREATOR' || myRole === 'ADMIN';
 
       headerActions.innerHTML = `
         <div class="chat-header-options">
@@ -86,6 +86,16 @@ export function updateChatHeader(title, avatarUrl, statusText, conversationId = 
               </svg>
               <span style="color: var(--error);">${t('leave_group')}</span>
             </button>
+            ${myRole === 'CREATOR' ? `
+            <button class="dropdown-item" id="option-disband-convo">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--error);">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="15" y1="9" x2="9" y2="15"></line>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
+              </svg>
+              <span style="color: var(--error);">${t('disband')}</span>
+            </button>
+            ` : ''}
             ` : ''}
           </div>
         </div>
@@ -160,13 +170,10 @@ export function updateChatHeader(title, avatarUrl, statusText, conversationId = 
 
           if (confirm) {
             try {
-              let res = await api.patch(`conversations/${conversationId}/member/${currentUserId}`);
-              if (!res || !res.success) {
-                res = await api.patch(`conversation/${conversationId}/member/${currentUserId}`);
-              }
+              const res = await api.patch(`conversations/${conversationId}/leave`);
               if (res && res.success) {
-                // Refresh list and clear active conversation
-                document.dispatchEvent(new CustomEvent('refresh-conversations'));
+                // Clear active conversation and cache via custom event
+                document.dispatchEvent(new CustomEvent('left-conversation', { detail: { conversationId } }));
                 window.location.hash = 'home';
 
                 await showDialog({
@@ -184,6 +191,29 @@ export function updateChatHeader(title, avatarUrl, statusText, conversationId = 
                 type: 'error'
               });
             }
+          }
+        });
+      }
+
+      const optDisbandConvo = headerActions.querySelector('#option-disband-convo');
+      if (optDisbandConvo) {
+        optDisbandConvo.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (dropdown) dropdown.style.display = 'none';
+
+          const { showDialog } = await import('../../../../js/shared/dialog/dialog.js');
+          const confirm = await showDialog({
+            title: t('disband_convo_title'),
+            message: t('disband_convo_msg'),
+            type: 'warning',
+            buttons: [
+              { text: t('logout_cancel'), type: 'secondary', value: false },
+              { text: t('disband'), type: 'danger', value: true }
+            ]
+          });
+
+          if (confirm) {
+            document.dispatchEvent(new CustomEvent('disband-conversation', { detail: { conversationId } }));
           }
         });
       }

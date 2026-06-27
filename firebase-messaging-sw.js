@@ -126,7 +126,8 @@ onBackgroundMessage(messaging, async (payload) => {
     return;
   }
 
-  const notificationTitle = dataSource.title || 'Thông báo mới';
+  const isVi = navigator.language && navigator.language.startsWith('vi');
+  const notificationTitle = dataSource.title || (isVi ? 'Thông báo mới' : 'New Notification');
   // Ưu tiên gom nhóm theo tag từ server trả về, sau đó mới đến conversationId
   const groupTag = dataSource.tag || (payload.notification && payload.notification.tag) || (conversationId ? `convo-${conversationId}` : messageId);
   const clickAction = dataSource.link || `${self.location.origin}/#home?conversationId=${conversationId}`;
@@ -148,10 +149,24 @@ onBackgroundMessage(messaging, async (payload) => {
     console.error('Lỗi khi lấy thông báo cũ:', e);
   }
 
+  let displayBody = dataSource.body || (isVi ? 'Bạn có tin nhắn mới.' : 'You have a new message.');
+  if (messageType && messageType !== 'TEXT') {
+    const type = String(messageType).toUpperCase();
+    if (type === 'IMAGE') {
+      displayBody = isVi ? '[Hình ảnh]' : '[Image]';
+    } else if (type === 'VIDEO') {
+      displayBody = isVi ? '[Video]' : '[Video]';
+    } else if (type === 'AUDIO') {
+      displayBody = isVi ? '[Tin nhắn thoại]' : '[Voice message]';
+    } else if (type === 'FILE') {
+      displayBody = isVi ? '[Tài liệu]' : '[Document]';
+    }
+  }
+
   // Thêm tin nhắn mới vào danh sách nhóm
   messages.push({
     messageId: messageId,
-    body: dataSource.body || 'Bạn có tin nhắn mới.',
+    body: displayBody,
     title: notificationTitle
   });
 
@@ -160,7 +175,7 @@ onBackgroundMessage(messaging, async (payload) => {
   const finalTitle = count > 1 ? `${notificationTitle} (${count})` : notificationTitle;
 
   // Tạo nội dung hiển thị (tối đa 3 tin nhắn gần nhất)
-  let finalBody = dataSource.body || 'Bạn có tin nhắn mới.';
+  let finalBody = displayBody;
   if (count > 1) {
     const recentMessages = messages.slice(-3);
     finalBody = recentMessages.map(m => m.body).join('\n');

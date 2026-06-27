@@ -57,10 +57,16 @@ export const UsersView = {
 
             <!-- List box -->
             <div id="users-list-container" class="users-list-wrapper">
-              <div class="list-fallback-state">
-                <div class="spinner" style="margin: 0 auto 12px;"></div>
-                ${t('loading_members_list')}
-              </div>
+              ${Array(5).fill(0).map(() => `
+                <div class="user-list-card-skeleton" style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: hsla(230, 25%, 6%, 0.25);">
+                  <div class="skeleton-loader skeleton-circle" style="width: 20px; height: 20px; flex-shrink: 0;"></div>
+                  <div class="skeleton-loader skeleton-circle" style="width: 44px; height: 44px; flex-shrink: 0;"></div>
+                  <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+                    <div class="skeleton-loader skeleton-text" style="width: 60%; height: 12px; margin-bottom: 0;"></div>
+                    <div class="skeleton-loader skeleton-text" style="width: 40%; height: 10px; margin-bottom: 0;"></div>
+                  </div>
+                </div>
+              `).join('')}
             </div>
             
             <!-- Load More button container -->
@@ -199,12 +205,16 @@ export const UsersView = {
     // Show spinner if empty or when performing a new search/refresh page
     const listWrapper = document.getElementById('users-list-container');
     if (listWrapper && (this.usersList.length === 0 || !nextPage)) {
-      listWrapper.innerHTML = `
-        <div class="list-fallback-state">
-          <div class="spinner" style="margin: 0 auto 12px;"></div>
-          ${this.searchTerm ? t('searching_members') : t('loading_members')}
+      listWrapper.innerHTML = Array(5).fill(0).map(() => `
+        <div class="user-list-card-skeleton" style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: hsla(230, 25%, 6%, 0.25); margin-bottom: 10px;">
+          <div class="skeleton-loader skeleton-circle" style="width: 20px; height: 20px; flex-shrink: 0;"></div>
+          <div class="skeleton-loader skeleton-circle" style="width: 44px; height: 44px; flex-shrink: 0;"></div>
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+            <div class="skeleton-loader skeleton-text" style="width: 60%; height: 12px; margin-bottom: 0;"></div>
+            <div class="skeleton-loader skeleton-text" style="width: 40%; height: 10px; margin-bottom: 0;"></div>
+          </div>
         </div>
-      `;
+      `).join('');
     }
 
     try {
@@ -468,9 +478,48 @@ export const UsersView = {
 
     if (this.detailsLoading) {
       detailsPanel.innerHTML = `
-        <div class="details-loading-state">
-          <div class="spinner"></div>
-          <p>${t('loading_user_details')}</p>
+        <div class="details-content-wrapper" style="opacity: 0.85;">
+          <!-- Header Banner Skeleton -->
+          <div class="user-detail-card-header" style="padding-bottom: 20px;">
+            <div class="user-detail-cover skeleton-loader" style="height: 80px; border-radius: var(--radius-lg) var(--radius-lg) 0 0;"></div>
+            <div class="user-detail-avatar-container" style="margin-top: -40px;">
+              <div class="skeleton-loader skeleton-circle" style="width: 80px; height: 80px; border: 4px solid var(--bg-secondary);"></div>
+            </div>
+            <div class="user-detail-identity" style="display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 10px;">
+              <div class="skeleton-loader skeleton-text" style="width: 35%; height: 16px; margin-bottom: 0;"></div>
+              <div class="skeleton-loader skeleton-text" style="width: 20%; height: 12px; margin-bottom: 0;"></div>
+              <div style="display: flex; gap: 8px; justify-content: center; width: 100%; margin-top: 4px;">
+                <div class="skeleton-loader" style="width: 60px; height: 20px; border-radius: var(--radius-sm);"></div>
+                <div class="skeleton-loader" style="width: 80px; height: 20px; border-radius: var(--radius-sm);"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Info Grid Skeleton -->
+          <div class="user-detail-grid">
+            <div class="user-detail-pane" style="display: flex; flex-direction: column; gap: 12px;">
+              <div class="skeleton-loader skeleton-text" style="width: 40%; height: 14px; margin-bottom: 8px;"></div>
+              ${Array(3).fill(0).map(() => `
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                  <div class="skeleton-loader skeleton-text" style="width: 30%; height: 10px; margin-bottom: 0;"></div>
+                  <div class="skeleton-loader skeleton-text" style="width: 70%; height: 12px; margin-bottom: 0;"></div>
+                </div>
+              `).join('')}
+            </div>
+
+            <div class="user-detail-pane" style="display: flex; flex-direction: column; gap: 12px;">
+              <div class="skeleton-loader skeleton-text" style="width: 50%; height: 14px; margin-bottom: 8px;"></div>
+              ${Array(2).fill(0).map(() => `
+                <div style="display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 8px 12px;">
+                  <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+                    <div class="skeleton-loader skeleton-text" style="width: 60%; height: 12px; margin-bottom: 0;"></div>
+                    <div class="skeleton-loader skeleton-text" style="width: 40%; height: 10px; margin-bottom: 0;"></div>
+                  </div>
+                  <div class="skeleton-loader" style="width: 60px; height: 20px; border-radius: var(--radius-sm);"></div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
         </div>
       `;
     }

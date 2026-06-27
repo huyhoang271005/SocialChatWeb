@@ -11,7 +11,7 @@ export function showViewMembersModal(conversationId, conversations) {
   const userConversations = convo ? (convo.userConversations || []) : [];
   const myConvoEntry = userConversations.find(u => String(u.userId) === currentUserId);
   const myRole = myConvoEntry ? String(myConvoEntry.conversationRole || 'MEMBER').toUpperCase() : 'MEMBER';
-  const canDeleteMember = !convo || !convo.group || myRole === 'CREATOR';
+  const canDeleteMember = !convo || !convo.group || myRole === 'CREATOR' || myRole === 'ADMIN';
   const canChangeRole = !convo || !convo.group || myRole === 'CREATOR' || myRole === 'ADMIN';
 
   overlay.innerHTML = `
@@ -76,9 +76,23 @@ export function showViewMembersModal(conversationId, conversations) {
       return;
     }
 
+    const ROLE_PRIORITY = {
+      'CREATOR': 3,
+      'ADMIN': 2,
+      'MEMBER': 1
+    };
+
+    const sortedMembers = [...userConversations].sort((a, b) => {
+      const roleA = String(a.conversationRole || 'MEMBER').toUpperCase();
+      const roleB = String(b.conversationRole || 'MEMBER').toUpperCase();
+      const priorityA = ROLE_PRIORITY[roleA] || 0;
+      const priorityB = ROLE_PRIORITY[roleB] || 0;
+      return priorityB - priorityA;
+    });
+
     const defaultAvatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&h=100';
 
-    container.innerHTML = userConversations.map(member => {
+    container.innerHTML = sortedMembers.map(member => {
       const isSelf = String(member.userId) === currentUserId;
       const avatarUrl = member.avatarUrl || defaultAvatar;
       const role = String(member.conversationRole || 'MEMBER').toUpperCase();
@@ -93,8 +107,15 @@ export function showViewMembersModal(conversationId, conversations) {
         roleLabel = t('role_admin');
       }
 
-      const isDeletable = !isSelf && canDeleteMember;
-      const isRoleEditable = !isSelf && role !== 'CREATOR' && canChangeRole;
+      const isDeletable = !isSelf && canDeleteMember && (
+        myRole === 'CREATOR' ||
+        (myRole === 'ADMIN' && role === 'MEMBER') ||
+        (!convo || !convo.group)
+      );
+      const isRoleEditable = !isSelf && role !== 'CREATOR' && canChangeRole && (
+        myRole === 'CREATOR' ||
+        (myRole === 'ADMIN' && role === 'MEMBER')
+      );
 
       return `
         <div class="member-list-item" data-id="${member.userId}" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: hsla(230, 25%, 6%, 0.25); cursor: default; transition: var(--transition-smooth);">

@@ -1,5 +1,7 @@
 import { socket } from '../../../../js/core/websocket.js';
 import { t, formatSystemMessage } from '../../../../js/core/i18n.js';
+import { api } from '../../../../js/core/api.js';
+import { ConversationHandler } from './conversation-handler.js';
 
 function mergeConversation(oldConvo, newConvoDto) {
   if (oldConvo && oldConvo.userConversations && newConvoDto && newConvoDto.userConversations) {
@@ -21,14 +23,64 @@ function mergeConversation(oldConvo, newConvoDto) {
   return merged;
 }
 
-function formatMessageTime(createdAt) {
-  if (!createdAt) {
-    return new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+export function formatMessageTime(createdAt) {
+  if (!createdAt) return '';
+  const date = new Date(createdAt);
+  if (isNaN(date.getTime())) return String(createdAt);
+
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSecs = Math.floor(diffMs / 1000);
+  const diffMins = Math.floor(diffSecs / 60);
+  const diffHours = Math.floor(diffMins / 60);
+
+  if (diffSecs < 60) {
+    return t('just_now');
   }
-  const d = new Date(createdAt);
-  return !isNaN(d.getTime())
-    ? d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-    : String(createdAt);
+  if (diffMins < 60) {
+    return t('minutes_ago').replace('{count}', diffMins);
+  }
+  if (diffHours < 24) {
+    return t('hours_ago').replace('{count}', diffHours);
+  }
+
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const compareDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffTime = today.getTime() - compareDate.getTime();
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 1) {
+    return t('yesterday');
+  }
+  if (diffDays < 7) {
+    return t('days_ago').replace('{count}', diffDays);
+  }
+  
+  const diffWeeks = Math.floor(diffDays / 7);
+  if (diffWeeks < 4) {
+    return t('weeks_ago').replace('{count}', diffWeeks);
+  }
+
+  const diffMonths = Math.floor(diffDays / 30);
+  if (diffMonths < 12) {
+    return t('months_ago').replace('{count}', diffMonths);
+  }
+
+  const diffYears = Math.floor(diffDays / 365);
+  return t('years_ago').replace('{count}', diffYears);
+}
+
+export function formatSpecificTime(createdAt) {
+  if (!createdAt) return '';
+  const date = new Date(createdAt);
+  if (isNaN(date.getTime())) return String(createdAt);
+
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  const timeStr = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  return `${timeStr} ${day}/${month}/${year}`;
 }
 
 export function handleSocketEvent(ctx, event) {
@@ -41,15 +93,29 @@ export function handleSocketEvent(ctx, event) {
   let messageDto = null;
   let conversationDto = null;
 
-  // 1. Theo cấu trúc mới DataDto
-  if (event.message && typeof event.message === 'object') {
+  // 1. Theo cấu trúc mới DataDto (gộp message/conversation thành data)
+  if (event.data && typeof event.data === 'object') {
+    if (
+      eventType === 'NEW_MESSAGE' ||
+      eventType === 'REVOKE_MESSAGE' ||
+      eventType === 'SEEN_MESSAGE' ||
+      eventType === 'UPDATE_MESSAGE'
+    ) {
+      messageDto = event.data;
+    } else {
+      conversationDto = event.data;
+    }
+  }
+
+  // 2. Fallback cấu trúc cũ
+  if (!messageDto && event.message && typeof event.message === 'object') {
     messageDto = event.message;
   }
-  if (event.conversation && typeof event.conversation === 'object') {
+  if (!conversationDto && event.conversation && typeof event.conversation === 'object') {
     conversationDto = event.conversation;
   }
 
-  // 2. Fallback cấu trúc cũ phẳng hoặc dùng data
+  // 3. Fallback cấu trúc cũ phẳng hoặc dùng data cũ
   const data = event.data || event;
   if (!messageDto && data && typeof data === 'object') {
     if (data.conversationId || data.messageId || data.text || (data.message && typeof data.message !== 'string')) {
@@ -120,6 +186,7 @@ export function handleSocketEvent(ctx, event) {
                 ctx.conversations
               );
 
+              ConversationHandler.updateChatInputRestriction(ctx, activeConvo);
               const eventObj = new CustomEvent('members-updated', { detail: { conversationId: activeConvoId } });
               document.dispatchEvent(eventObj);
             }
@@ -178,6 +245,7 @@ export function handleSocketEvent(ctx, event) {
                 ctx.conversations
               );
 
+              ConversationHandler.updateChatInputRestriction(ctx, convo);
               const eventObj = new CustomEvent('members-updated', { detail: { conversationId: convo.conversationId } });
               document.dispatchEvent(eventObj);
             }
@@ -201,8 +269,7 @@ export function handleSocketEvent(ctx, event) {
         }
       }
       break;
-
-    case 'SEND_MESSAGE':
+      
     case 'NEW_MESSAGE':
       if (messageDto && messageDto.conversationId) {
         const activeConvoId = String(ctx.conversationId);
@@ -271,6 +338,8 @@ export function handleSocketEvent(ctx, event) {
                   ctx.messages[existingIndex].replyType = messageDto.replyType || ctx.messages[existingIndex].replyType || null;
                   ctx.messages[existingIndex].replyRevoked = messageDto.replyRevoked === true || ctx.messages[existingIndex].replyRevoked === true;
                   ctx.messages[existingIndex].rawText = messageDto.rawText;
+                  ctx.messages[existingIndex].reactorCount = messageDto.reactorCount || messageDto.reactionCount || ctx.messages[existingIndex].reactorCount || null;
+                  ctx.messages[existingIndex].createdAt = messageDto.createdAt || ctx.messages[existingIndex].createdAt;
                   if (isRevoked) {
                     ctx.messages[existingIndex].text = t('revoked_msg');
                   }
@@ -288,7 +357,9 @@ export function handleSocketEvent(ctx, event) {
                     replyText: messageDto.replyText || null,
                     replyType: messageDto.replyType || null,
                     replyRevoked: messageDto.replyRevoked === true,
-                    rawText: messageDto.rawText
+                    rawText: messageDto.rawText,
+                    reactorCount: messageDto.reactorCount || messageDto.reactionCount || null,
+                    createdAt: messageDto.createdAt
                   });
                 }
                 sessionStorage.setItem(targetCacheKey, JSON.stringify(ctx.messages));
@@ -328,6 +399,8 @@ export function handleSocketEvent(ctx, event) {
                   targetMsgs[existingIndex].replyType = messageDto.replyType || targetMsgs[existingIndex].replyType || null;
                   targetMsgs[existingIndex].replyRevoked = messageDto.replyRevoked === true || targetMsgs[existingIndex].replyRevoked === true;
                   targetMsgs[existingIndex].rawText = messageDto.rawText;
+                  targetMsgs[existingIndex].reactorCount = messageDto.reactorCount || messageDto.reactionCount || targetMsgs[existingIndex].reactorCount || null;
+                  targetMsgs[existingIndex].createdAt = messageDto.createdAt || targetMsgs[existingIndex].createdAt;
                   if (isRevoked) {
                     targetMsgs[existingIndex].text = t('revoked_msg');
                   }
@@ -345,7 +418,9 @@ export function handleSocketEvent(ctx, event) {
                     replyText: messageDto.replyText || null,
                     replyType: messageDto.replyType || null,
                     replyRevoked: messageDto.replyRevoked === true,
-                    rawText: messageDto.rawText
+                    rawText: messageDto.rawText,
+                    reactorCount: messageDto.reactorCount || messageDto.reactionCount || null,
+                    createdAt: messageDto.createdAt
                   });
                 }
                 sessionStorage.setItem(targetCacheKey, JSON.stringify(targetMsgs));
@@ -371,7 +446,9 @@ export function handleSocketEvent(ctx, event) {
               replyText: messageDto.replyText || null,
               replyType: messageDto.replyType || null,
               replyRevoked: messageDto.replyRevoked === true,
-              rawText: messageDto.rawText
+              rawText: messageDto.rawText,
+              reactorCount: messageDto.reactorCount || messageDto.reactionCount || null,
+              createdAt: messageDto.createdAt
             });
             sessionStorage.setItem(targetCacheKey, JSON.stringify(ctx.messages));
             ctx.renderMessages();
@@ -400,11 +477,25 @@ export function handleSocketEvent(ctx, event) {
                 }
               }
             }
+
+            let notificationBody = isRevoked ? t('revoked_msg') : messageText;
+            if (!isRevoked && msgType !== 'TEXT') {
+              if (msgType === 'IMAGE') {
+                notificationBody = t('snippet_image');
+              } else if (msgType === 'VIDEO') {
+                notificationBody = t('snippet_video');
+              } else if (msgType === 'AUDIO') {
+                notificationBody = t('snippet_audio');
+              } else if (msgType === 'FILE') {
+                notificationBody = t('snippet_file');
+              }
+            }
+
             import('../../../../js/core/firebase.js')
               .then(({ showNativeNotification }) => {
                 showNativeNotification(
                   senderName,
-                  isRevoked ? t('revoked_msg') : messageText,
+                  notificationBody,
                   incomingConvoId,
                   messageDto.messageId || messageDto.id,
                   messageDto.tag || event.tag
@@ -438,17 +529,40 @@ export function handleSocketEvent(ctx, event) {
           ctx.conversations.unshift(convo);
           ctx.renderConversationsList();
         } else {
-          if (conversationDto) {
-            const idx = ctx.conversations.findIndex(c => String(c.conversationId) === String(conversationDto.conversationId));
-            if (idx !== -1) {
-              const oldC = ctx.conversations.splice(idx, 1)[0];
-              ctx.conversations.unshift(mergeConversation(oldC, conversationDto));
-            } else {
-              ctx.conversations.unshift(conversationDto);
-            }
-            ctx.renderConversationsList();
+          if (eventType === 'NEW_MESSAGE' || eventType === 'SEND_MESSAGE') {
+            api.get(`conversations/${incomingConvoId}`)
+              .then(res => {
+                if (res && res.success && res.data) {
+                  const newConvo = res.data;
+                  const idx = ctx.conversations.findIndex(c => String(c.conversationId) === String(newConvo.conversationId));
+                  if (idx !== -1) {
+                    const oldC = ctx.conversations.splice(idx, 1)[0];
+                    ctx.conversations.unshift(mergeConversation(oldC, newConvo));
+                  } else {
+                    ctx.conversations.unshift(newConvo);
+                  }
+                  ctx.renderConversationsList();
+                } else {
+                  ctx.loadConversations(false);
+                }
+              })
+              .catch(err => {
+                console.warn('Failed to fetch conversation details for incoming message:', err);
+                ctx.loadConversations(false);
+              });
           } else {
-            ctx.loadConversations(false);
+            if (conversationDto) {
+              const idx = ctx.conversations.findIndex(c => String(c.conversationId) === String(conversationDto.conversationId));
+              if (idx !== -1) {
+                const oldC = ctx.conversations.splice(idx, 1)[0];
+                ctx.conversations.unshift(mergeConversation(oldC, conversationDto));
+              } else {
+                ctx.conversations.unshift(conversationDto);
+              }
+              ctx.renderConversationsList();
+            } else {
+              ctx.loadConversations(false);
+            }
           }
         }
       }
@@ -525,10 +639,46 @@ export function handleSocketEvent(ctx, event) {
       }
       break;
 
+    case 'UPDATE_MESSAGE':
+      if (messageDto && messageDto.conversationId && (messageDto.messageId || messageDto.id)) {
+        const incomingConvoId = String(messageDto.conversationId);
+        const activeConvoId = String(ctx.conversationId);
+        const targetMsgId = String(messageDto.messageId || messageDto.id);
+
+        // 1. Cập nhật cache trong sessionStorage nếu tồn tại
+        const cacheKey = `chat_messages_cache_${incomingConvoId}`;
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+          try {
+            const cachedMsgs = JSON.parse(cached);
+            const msgIndex = cachedMsgs.findIndex(m => String(m.id || m.messageId) === targetMsgId);
+            if (msgIndex !== -1) {
+              cachedMsgs[msgIndex] = { ...cachedMsgs[msgIndex], ...messageDto };
+              cachedMsgs[msgIndex].id = messageDto.messageId || messageDto.id;
+              sessionStorage.setItem(cacheKey, JSON.stringify(cachedMsgs));
+            }
+          } catch (e) {
+            console.warn('Failed to update cache on UPDATE_MESSAGE:', e);
+          }
+        }
+
+        // 2. Nếu là cuộc hội thoại đang mở, cập nhật ctx.messages
+        if (incomingConvoId === activeConvoId) {
+          const msgIndex = ctx.messages.findIndex(m => String(m.id || m.messageId) === targetMsgId);
+          if (msgIndex !== -1) {
+            ctx.messages[msgIndex] = { ...ctx.messages[msgIndex], ...messageDto };
+            ctx.messages[msgIndex].id = messageDto.messageId || messageDto.id;
+            ctx.messages[msgIndex].time = formatMessageTime(messageDto.createdAt || ctx.messages[msgIndex].createdAt);
+            ctx.renderMessages();
+          }
+        }
+      }
+      break;
+
     case 'SEEN_MESSAGE':
       {
         const senderId = event.senderId;
-        const message = event.message;
+        const message = event.message || messageDto;
         const convoId = message?.conversationId;
         const msgId = message?.messageId;
 
@@ -585,8 +735,10 @@ export function handleSocketEvent(ctx, event) {
       break;
 
     case 'TYPING':
-      if (conversationDto && conversationDto.conversationId) {
-        const incomingConvoId = String(conversationDto.conversationId);
+      if (event.data) {
+        const incomingConvoId = typeof event.data === 'object' && event.data !== null
+          ? String(event.data.conversationId || '')
+          : String(event.data);
         const activeConvoId = String(ctx.conversationId);
         const senderId =  event.senderId;
         const currentUserId = localStorage.getItem('chat_user_id') || 'user_me';
@@ -632,8 +784,10 @@ export function handleSocketEvent(ctx, event) {
       break;
 
     case 'UNTYPING':
-      if (conversationDto && conversationDto.conversationId) {
-        const incomingConvoId = String(conversationDto.conversationId);
+      if (event.data) {
+        const incomingConvoId = typeof event.data === 'object' && event.data !== null
+          ? String(event.data.conversationId || '')
+          : String(event.data);
         const activeConvoId = String(ctx.conversationId);
         const senderId = event.senderId;
         const currentUserId = localStorage.getItem('chat_user_id') || 'user_me';

@@ -24,10 +24,22 @@ export const RolesView = {
           <div class="roles-section">
             <h3 class="form-title">${t('roles_list_title')}</h3>
             <div id="roles-list" class="roles-list-container">
-              <div class="no-roles-fallback">
-                <div class="spinner" style="margin: 0 auto 12px;"></div>
-                ${t('loading_roles_list')}
-              </div>
+              ${Array(3).fill(0).map(() => `
+                <div class="role-card" style="display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: hsla(230, 25%, 6%, 0.25); margin-bottom: 10px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="skeleton-loader skeleton-text" style="width: 40%; height: 14px; margin-bottom: 0;"></div>
+                    <div style="display: flex; gap: 8px;">
+                      <div class="skeleton-loader skeleton-circle" style="width: 20px; height: 20px;"></div>
+                      <div class="skeleton-loader skeleton-circle" style="width: 20px; height: 20px;"></div>
+                    </div>
+                  </div>
+                  <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;">
+                    <div class="skeleton-loader" style="width: 70px; height: 18px; border-radius: var(--radius-sm);"></div>
+                    <div class="skeleton-loader" style="width: 80px; height: 18px; border-radius: var(--radius-sm);"></div>
+                    <div class="skeleton-loader" style="width: 60px; height: 18px; border-radius: var(--radius-sm);"></div>
+                  </div>
+                </div>
+              `).join('')}
             </div>
           </div>
 
@@ -43,9 +55,12 @@ export const RolesView = {
               <div class="form-group">
                 <label class="form-label">${t('assign_permissions_label')}</label>
                 <div id="permissions-grid" class="permissions-select-grid">
-                  <div style="grid-column: 1/-1; text-align: center; padding: 20px; color: var(--text-muted);">
-                    ${t('loading_permissions')}
-                  </div>
+                  ${Array(5).fill(0).map(() => `
+                    <div class="permission-checkbox-label" style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: hsla(230, 25%, 4%, 0.15); border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                      <div class="skeleton-loader skeleton-circle" style="width: 16px; height: 16px; flex-shrink: 0;"></div>
+                      <div class="skeleton-loader skeleton-text" style="width: 60%; height: 10px; margin-bottom: 0;"></div>
+                    </div>
+                  `).join('')}
                 </div>
               </div>
 
