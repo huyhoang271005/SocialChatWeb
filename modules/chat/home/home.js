@@ -749,10 +749,11 @@ export const HomeView = {
           const conversationId = payload.data?.conversationId || payload.data?.id;
           const messageId = payload.data?.messageId;
           const tag = payload.data?.tag || payload.notification?.tag;
+          const icon = payload.data?.icon || payload.notification?.icon;
 
           // Nếu ngoài cuộc trò chuyện đó thì hiển thị thông báo native lên
           if (String(conversationId) !== String(this.conversationId)) {
-            showNativeNotification(title, body, conversationId, messageId, tag);
+            showNativeNotification(title, body, conversationId, messageId, tag, icon);
           }
         });
       })

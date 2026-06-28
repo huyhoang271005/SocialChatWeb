@@ -147,6 +147,9 @@ export function getCurrentFirebaseToken() {
   });
 }
 
+// Set lưu các messageId đã được hiển thị để tránh trùng lặp giữa WebSocket và FCM ở foreground
+const processedMessageIds = new Set();
+
 /**
  * Hiển thị thông báo native trên trình duyệt
  * @param {string} title Tiêu đề thông báo
@@ -154,10 +157,25 @@ export function getCurrentFirebaseToken() {
  * @param {string} conversationId ID cuộc trò chuyện để điều hướng khi click
  * @param {string} messageId ID tin nhắn (làm tag để tránh trùng lặp)
  * @param {string} tag Tag tùy chỉnh để gom nhóm
+ * @param {string} icon Đường dẫn ảnh đại diện phòng chat/người dùng
  */
-export async function showNativeNotification(title, body, conversationId, messageId, tag) {
+export async function showNativeNotification(title, body, conversationId, messageId, tag, icon) {
   if (Notification.permission !== 'granted') {
     return;
+  }
+
+  // Chặn hiển thị thông báo trùng lặp cho cùng một messageId ở foreground
+  if (messageId) {
+    const msgIdStr = String(messageId);
+    if (processedMessageIds.has(msgIdStr)) {
+      console.log(`[FCM/WS] Bỏ qua hiển thị trùng lặp cho tin nhắn: ${msgIdStr}`);
+      return;
+    }
+    processedMessageIds.add(msgIdStr);
+    if (processedMessageIds.size > 100) {
+      const first = processedMessageIds.keys().next().value;
+      processedMessageIds.delete(first);
+    }
   }
 
   // Ưu tiên sử dụng tag gom nhóm từ server/FCM, sau đó mới dùng conversationId
@@ -203,7 +221,7 @@ export async function showNativeNotification(title, body, conversationId, messag
 
       const options = {
         body: finalBody,
-        icon: '/favicon.ico',
+        icon: icon || '/favicon.ico',
         badge: '/favicon.ico',
         tag: groupTag,
         data: {
@@ -220,7 +238,7 @@ export async function showNativeNotification(title, body, conversationId, messag
     // Fallback khi không hỗ trợ service worker
     const options = {
       body: body,
-      icon: '/favicon.ico',
+      icon: icon || '/favicon.ico',
       badge: '/favicon.ico',
       tag: groupTag,
       data: {

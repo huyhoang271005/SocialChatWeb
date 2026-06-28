@@ -465,7 +465,18 @@ export function handleSocketEvent(ctx, event) {
           if (document.visibilityState === 'visible') {
             let senderName = t('new_message_alert');
             const convo = ctx.conversations.find(c => String(c.conversationId) === incomingConvoId);
+            let avatarUrl = '/favicon.ico';
             if (convo) {
+              const defaultUserAvatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&h=100';
+              const defaultGroupAvatar = 'https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?auto=format&fit=crop&w=100&h=100';
+              avatarUrl = convo.conversationAvatarUrl || (convo.group ? defaultGroupAvatar : defaultUserAvatar);
+              if (!convo.group) {
+                const otherParticipant = convo.userConversations?.find(u => String(u.userId) !== String(currentUserId));
+                if (otherParticipant && (otherParticipant.avatarUrl || otherParticipant.user?.avatarUrl)) {
+                  avatarUrl = otherParticipant.avatarUrl || otherParticipant.user.avatarUrl;
+                }
+              }
+
               if (convo.group) {
                 senderName = convo.title || `${t('group_chat_prefix')} #${incomingConvoId}`;
               } else {
@@ -498,7 +509,8 @@ export function handleSocketEvent(ctx, event) {
                   notificationBody,
                   incomingConvoId,
                   messageDto.messageId || messageDto.id,
-                  messageDto.tag || event.tag
+                  messageDto.tag || event.tag,
+                  avatarUrl
                 );
               })
               .catch(err => console.warn('Không thể tải showNativeNotification từ firebase.js:', err));

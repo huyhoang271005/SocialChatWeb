@@ -6,6 +6,9 @@ import { getMessaging, onBackgroundMessage } from 'https://www.gstatic.com/fireb
 const app = initializeApp(CONFIG.FIREBASE_CONFIG);
 const messaging = getMessaging(app);
 
+// Set để lọc trùng tin nhắn dựa trên messageId khi nhận trong background
+const processedBackgroundMessageIds = new Set();
+
 // Kiểm tra xem cuộc trò chuyện có đang mở ở client nào không
 async function isConversationActive(conversationId) {
   if (!conversationId) return false;
@@ -44,6 +47,33 @@ onBackgroundMessage(messaging, async (payload) => {
   const messageId = dataSource.messageId;
   const messageType = dataSource.messageType;
   const conversationId = dataSource.conversationId || dataSource.id;
+
+  // Lọc trùng tin nhắn
+  if (messageId) {
+    const msgIdStr = String(messageId);
+    if (processedBackgroundMessageIds.has(msgIdStr)) {
+      console.log('Bỏ qua tin nhắn trùng lặp trong background:', msgIdStr);
+      return;
+    }
+    processedBackgroundMessageIds.add(msgIdStr);
+    if (processedBackgroundMessageIds.size > 100) {
+      const first = processedBackgroundMessageIds.keys().next().value;
+      processedBackgroundMessageIds.delete(first);
+    }
+  }
+
+  // Đóng lập tức các thông báo tự động hiển thị bởi trình duyệt/FCM SDK
+  // (Nhận diện thông báo tự động: Không có custom data click_action)
+  try {
+    const activeNotifications = await self.registration.getNotifications();
+    activeNotifications.forEach((n) => {
+      if (!n.data || !n.data.click_action) {
+        n.close();
+      }
+    });
+  } catch (e) {
+    console.error('Lỗi đóng thông báo tự động trùng lặp ban đầu:', e);
+  }
 
   // Nếu là sự kiện thu hồi tin nhắn
   if (messageType === 'REVOKE_MESSAGE' && messageId) {
@@ -137,7 +167,7 @@ onBackgroundMessage(messaging, async (payload) => {
   try {
     // Lấy tất cả thông báo hiện có và tìm kiếm theo tag để tăng độ tương thích trên thiết bị di động
     const activeNotifications = await self.registration.getNotifications();
-    const oldNotification = activeNotifications.find(n => n.tag === groupTag);
+    const oldNotification = activeNotifications.find(n => n.tag === groupTag && n.data && n.data.messages);
     if (oldNotification) {
       if (oldNotification.data && Array.isArray(oldNotification.data.messages)) {
         messages = [...oldNotification.data.messages];
@@ -181,9 +211,11 @@ onBackgroundMessage(messaging, async (payload) => {
     finalBody = recentMessages.map(m => m.body).join('\n');
   }
 
+  const customIcon = dataSource.icon || (payload.notification && payload.notification.icon) || '/favicon.ico';
+
   const notificationOptions = {
     body: finalBody,
-    icon: dataSource.icon || '/favicon.ico', // Bốc trường "icon" chính là avatar phòng chat từ Java truyền sang
+    icon: customIcon, // Bốc trường "icon" chính là avatar phòng chat từ Java hoặc notification payload truyền sang
     badge: '/favicon.ico',
     tag: groupTag,
     data: {
@@ -193,7 +225,21 @@ onBackgroundMessage(messaging, async (payload) => {
   };
 
   // Ra lệnh hiển thị thông báo
-  self.registration.showNotification(finalTitle, notificationOptions);
+  await self.registration.showNotification(finalTitle, notificationOptions);
+
+  // Thêm một lượt dọn dẹp sau 150ms để dọn sạch mọi thông báo tự động từ trình duyệt xuất hiện trễ
+  setTimeout(async () => {
+    try {
+      const activeNotifications = await self.registration.getNotifications();
+      activeNotifications.forEach((n) => {
+        if (!n.data || !n.data.click_action) {
+          n.close();
+        }
+      });
+    } catch (e) {
+      console.error('Lỗi dọn dẹp thông báo tự động xuất hiện trễ:', e);
+    }
+  }, 150);
 });
 
 // Giữ nguyên đoạn sự kiện click cũ của bạn
