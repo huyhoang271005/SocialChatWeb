@@ -2,10 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="70a16e7e-4c5f-4335-91a1-c3a4263fefce" name="Changes" comment="feat: add maintenance mode page with automated retry functionality and associated home module stub">
-      <change beforePath="$PROJECT_DIR$/firebase-messaging-sw.js" beforeDir="false" afterPath="$PROJECT_DIR$/firebase-messaging-sw.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/js/core/firebase.js" beforeDir="false" afterPath="$PROJECT_DIR$/js/core/firebase.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/js/core/router.js" beforeDir="false" afterPath="$PROJECT_DIR$/js/core/router.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/modules/auth/login/login.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/auth/login/login.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/chat/home/home.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/chat/home/home.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -105,7 +102,7 @@
       <workItem from="1782238560861" duration="1003000" />
       <workItem from="1782311706301" duration="3890000" />
       <workItem from="1782555368057" duration="3384000" />
-      <workItem from="1782658656148" duration="3744000" />
+      <workItem from="1782658656148" duration="4338000" />
     </task>
     <task id="LOCAL-00001" summary="feat: implement modular app architecture with responsive sidebar navigation and core services integration">
       <option name="closed" value="true" />

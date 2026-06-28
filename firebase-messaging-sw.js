@@ -110,8 +110,11 @@ onBackgroundMessage(messaging, async (payload) => {
     console.error('Lỗi đóng thông báo tự động trùng lặp ban đầu:', e);
   }
 
+  const isRevokeEvent = msgTypeUpper === 'REVOKE_MESSAGE' || 
+                        (dataSource.body && String(dataSource.body).toUpperCase() === 'REVOKE_MESSAGE');
+
   // Nếu là sự kiện thu hồi tin nhắn
-  if (msgTypeUpper === 'REVOKE_MESSAGE') {
+  if (isRevokeEvent) {
     if (messageId) {
       // 1. Âm thầm xoá thông báo cũ hoặc lọc bỏ tin nhắn bị thu hồi khỏi nhóm thông báo
       self.registration.getNotifications().then((notifications) => {

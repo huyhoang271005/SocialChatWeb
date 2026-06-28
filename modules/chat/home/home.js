@@ -716,51 +716,7 @@ export const HomeView = {
       });
     }
 
-    // 5. Lắng nghe thông báo Firebase khi ứng dụng đang mở (Foreground)
-    import('../../../js/core/firebase.js')
-      .then(({ initForegroundNotificationListener, showNativeNotification }) => {
-        initForegroundNotificationListener(async (payload) => {
-          // Bỏ qua các sự kiện thu hồi tin nhắn ở foreground để WebSocket tự xử lý giao diện
-          const msgTypeUpper = payload.data?.messageType ? String(payload.data.messageType).toUpperCase() : '';
-          if (msgTypeUpper === 'REVOKE_MESSAGE') {
-            return;
-          }
 
-          const senderId = payload.data?.senderId;
-          const currentUserId = localStorage.getItem('chat_user_id');
-          if (senderId && String(senderId) === String(currentUserId)) {
-            return;
-          }
-
-          const title = payload.notification?.title || payload.data?.title || t('new_notification');
-          let body = payload.notification?.body || payload.data?.body || t('new_message_alert');
-          const messageType = payload.data?.messageType;
-          if (messageType && messageType !== 'TEXT') {
-            const type = String(messageType).toUpperCase();
-            if (type === 'IMAGE') {
-              body = t('snippet_image');
-            } else if (type === 'VIDEO') {
-              body = t('snippet_video');
-            } else if (type === 'AUDIO') {
-              body = t('snippet_audio');
-            } else if (type === 'FILE') {
-              body = t('snippet_file');
-            }
-          }
-          const conversationId = payload.data?.conversationId || payload.data?.id;
-          const messageId = payload.data?.messageId;
-          const tag = payload.data?.tag || payload.notification?.tag;
-          const icon = payload.data?.icon || payload.notification?.icon;
-
-          // Nếu ngoài cuộc trò chuyện đó thì hiển thị thông báo native lên
-          if (String(conversationId) !== String(this.conversationId)) {
-            showNativeNotification(title, body, conversationId, messageId, tag, icon);
-          }
-        });
-      })
-      .catch(err => {
-        console.warn('Không thể khởi tạo bộ lắng nghe thông báo:', err);
-      });
 
     // 6. Xử lý tải lên Ảnh, Video, Ghi âm và Tài liệu
     const btnUploadImage = document.getElementById('btn-upload-image');
