@@ -321,3 +321,22 @@ export async function syncUserIdToServiceWorker(userId) {
     }
   }
 }
+
+/**
+ * Đồng bộ danh sách cuộc trò chuyện vào Cache Storage của Service Worker để lấy ảnh đại diện
+ * @param {Array|null} conversations Danh sách các cuộc trò chuyện hiện tại
+ */
+export async function syncConversationsToServiceWorker(conversations) {
+  if ('caches' in window) {
+    try {
+      const cache = await caches.open('chat-metadata');
+      if (conversations) {
+        await cache.put('/conversations', new Response(JSON.stringify(conversations)));
+      } else {
+        await cache.delete('/conversations');
+      }
+    } catch (e) {
+      console.warn('Không thể đồng bộ conversations với Service Worker:', e);
+    }
+  }
+}

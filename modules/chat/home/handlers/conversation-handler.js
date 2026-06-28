@@ -17,7 +17,7 @@ export const ConversationHandler = {
 
     // Load from cache if not nextPage and not forceRefresh
     if (!nextPage && !forceRefresh) {
-      const cached = sessionStorage.getItem('chat_conversations_cache');
+      const cached = localStorage.getItem('chat_conversations_cache');
       if (cached) {
         try {
           ctx.conversations = JSON.parse(cached);

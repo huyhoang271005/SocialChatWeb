@@ -578,7 +578,10 @@ export const HomeView = {
     updateConnectionStatus(navigator.onLine);
 
     const clearSessionCaches = () => {
-      sessionStorage.removeItem('chat_conversations_cache');
+      localStorage.removeItem('chat_conversations_cache');
+      import('../../../js/core/firebase.js').then(({ syncConversationsToServiceWorker }) => {
+        syncConversationsToServiceWorker(null);
+      }).catch(err => console.warn('Lỗi xoá đồng bộ conversations:', err));
       for (let i = sessionStorage.length - 1; i >= 0; i--) {
         const key = sessionStorage.key(i);
         if (key && key.startsWith('chat_messages_cache_')) {
@@ -896,7 +899,12 @@ export const HomeView = {
 
   renderConversationsList() {
     // Save conversations to cache whenever rendering the list
-    sessionStorage.setItem('chat_conversations_cache', JSON.stringify(this.conversations));
+    localStorage.setItem('chat_conversations_cache', JSON.stringify(this.conversations));
+
+    // Đồng bộ danh sách cuộc trò chuyện với Service Worker
+    import('../../../js/core/firebase.js').then(({ syncConversationsToServiceWorker }) => {
+      syncConversationsToServiceWorker(this.conversations);
+    }).catch(err => console.warn('Lỗi đồng bộ conversations cache với Service Worker:', err));
 
     renderConversationsList(
       this.conversations,
