@@ -413,12 +413,22 @@ onBackgroundMessage(messaging, async (payload) => {
 
   let customIcon = dataSource.icon || (payload.notification && payload.notification.icon);
 
-  if (!customIcon || customIcon === '/favicon.ico') {
+  const isDefaultIcon = !customIcon || 
+                        customIcon === '/favicon.ico' || 
+                        customIcon.includes('1582213782179') || 
+                        customIcon.includes('1535713875002');
+
+  if (isDefaultIcon) {
     try {
       const conversations = await getCachedConversations();
       const convo = conversations.find(c => String(c.conversationId) === String(conversationId));
       if (convo) {
-        if (convo.conversationAvatarUrl) {
+        // Kiểm tra xem cuộc trò chuyện có avatar tùy chỉnh thực sự không (không phải ảnh mặc định)
+        const hasCustomAvatar = convo.conversationAvatarUrl && 
+                                !convo.conversationAvatarUrl.includes('1582213782179') && 
+                                !convo.conversationAvatarUrl.includes('1535713875002');
+                                
+        if (hasCustomAvatar) {
           customIcon = convo.conversationAvatarUrl;
         } else if (convo.group) {
           // Xử lý ảnh gộp: Vẽ động ảnh gộp bằng OffscreenCanvas giống như giao diện
