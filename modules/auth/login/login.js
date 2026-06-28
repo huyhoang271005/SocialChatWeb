@@ -1,7 +1,7 @@
 import { api } from '../../../js/core/api.js';
 import { showDialog } from '../../../js/shared/dialog/dialog.js';
 import { CONFIG } from '../../../js/core/config.js';
-import { loginWithGoogle, getFCMToken } from '../../../js/core/firebase.js';
+import { loginWithGoogle, getFCMToken, syncUserIdToServiceWorker } from '../../../js/core/firebase.js';
 import { t, getLanguage } from '../../../js/core/i18n.js';
 
 export const LoginView = {
@@ -209,6 +209,7 @@ export const LoginView = {
 
           if (response.data && response.data.userId) {
             localStorage.setItem('chat_user_id', response.data.userId);
+            syncUserIdToServiceWorker(response.data.userId);
           }
           localStorage.setItem('chat_user_email', responseEmail);
           localStorage.setItem('chat_profile_completed', 'true');
@@ -382,6 +383,7 @@ export const LoginView = {
 
       if (response.data && response.data.userId) {
         localStorage.setItem('chat_user_id', response.data.userId);
+        syncUserIdToServiceWorker(response.data.userId);
       }
       localStorage.setItem('chat_user_email', email);
       localStorage.setItem('chat_profile_completed', 'true');

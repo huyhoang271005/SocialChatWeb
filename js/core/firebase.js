@@ -302,3 +302,22 @@ export async function revokeNativeNotification(messageId) {
     }
   }
 }
+
+/**
+ * Đồng bộ userId hiện tại vào Cache Storage của Service Worker để lọc trùng tin nhắn từ chính mình gửi
+ * @param {string|number|null} userId ID của người dùng đăng nhập hiện tại
+ */
+export async function syncUserIdToServiceWorker(userId) {
+  if ('caches' in window) {
+    try {
+      const cache = await caches.open('user-metadata');
+      if (userId) {
+        await cache.put('/user-id', new Response(String(userId)));
+      } else {
+        await cache.delete('/user-id');
+      }
+    } catch (e) {
+      console.warn('Không thể đồng bộ userId với Service Worker:', e);
+    }
+  }
+}

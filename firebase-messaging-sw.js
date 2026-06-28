@@ -38,6 +38,20 @@ async function isConversationActive(conversationId) {
   return false;
 }
 
+// Lấy userId hiện tại được đồng bộ từ client qua Cache Storage
+async function getCachedUserId() {
+  try {
+    const cache = await caches.open('user-metadata');
+    const response = await cache.match('/user-id');
+    if (response) {
+      return await response.text();
+    }
+  } catch (e) {
+    console.error('Lỗi khi lấy userId từ cache:', e);
+  }
+  return null;
+}
+
 // Xử lý thông báo đẩy khi ứng dụng chạy ẩn hoặc đã đóng
 onBackgroundMessage(messaging, async (payload) => {
   // 2. GIẢI PHÁP AN TOÀN: Kiểm tra xem data nằm ở bọc nào để bốc cho trúng
@@ -47,6 +61,7 @@ onBackgroundMessage(messaging, async (payload) => {
   const messageId = dataSource.messageId;
   const messageType = dataSource.messageType;
   const conversationId = dataSource.conversationId || dataSource.id;
+  const msgTypeUpper = messageType ? String(messageType).toUpperCase() : '';
 
   // Lọc trùng tin nhắn
   if (messageId) {
@@ -59,6 +74,27 @@ onBackgroundMessage(messaging, async (payload) => {
       const first = processedBackgroundMessageIds.keys().next().value;
       processedBackgroundMessageIds.delete(first);
     }
+  }
+
+  // Lọc trùng tin nhắn từ chính mình gửi (senderId trùng với userId hiện tại của thiết bị)
+  const currentUserId = await getCachedUserId();
+  if (dataSource.senderId && currentUserId && String(dataSource.senderId) === String(currentUserId)) {
+    // Tạo thông báo im lặng rồi đóng ngay để thoả mãn push event của trình duyệt
+    const silentTag = `silent-self-${messageId || Date.now()}`;
+    self.registration.showNotification('', {
+      silent: true,
+      body: '',
+      tag: silentTag
+    }).then(() => {
+      self.registration.getNotifications().then((notifications) => {
+        notifications.forEach((notification) => {
+          if (notification.tag === silentTag) {
+            notification.close();
+          }
+        });
+      });
+    });
+    return;
   }
 
   // Đóng lập tức các thông báo tự động hiển thị bởi trình duyệt/FCM SDK
@@ -75,63 +111,81 @@ onBackgroundMessage(messaging, async (payload) => {
   }
 
   // Nếu là sự kiện thu hồi tin nhắn
-  if (messageType === 'REVOKE_MESSAGE' && messageId) {
-    // 1. Âm thầm xoá thông báo cũ hoặc lọc bỏ tin nhắn bị thu hồi khỏi nhóm thông báo
-    self.registration.getNotifications().then((notifications) => {
-      notifications.forEach((notification) => {
-        if (notification.data && Array.isArray(notification.data.messages)) {
-          const hasMessage = notification.data.messages.some(m => String(m.messageId) === String(messageId));
-          if (hasMessage) {
-            const updatedMessages = notification.data.messages.filter(m => String(m.messageId) !== String(messageId));
-            notification.close(); // Đóng thông báo hiện tại
-            
-            if (updatedMessages.length > 0) {
-              // Nếu vẫn còn tin nhắn khác trong nhóm, cập nhật thông báo mới (không rung/âm thanh để tránh phiền)
-              const count = updatedMessages.length;
-              let originalTitle = notification.title;
-              const titleMatch = originalTitle.match(/^(.*?)\s*\(\d+\)$/);
-              if (titleMatch) {
-                originalTitle = titleMatch[1];
-              }
-              const finalTitle = count > 1 ? `${originalTitle} (${count})` : originalTitle;
-              const finalBody = updatedMessages.slice(-3).map(m => m.body).join('\n');
-              
-              self.registration.showNotification(finalTitle, {
-                body: finalBody,
-                icon: notification.icon,
-                badge: notification.badge,
-                tag: notification.tag,
-                silent: true,
-                data: {
-                  ...notification.data,
-                  messages: updatedMessages
-                }
-              });
-            }
-          }
-        } else if (notification.tag === messageId) {
-          notification.close();
-        }
-      });
-    });
-
-    // 2. Tạo thông báo trống hoàn toàn im lặng (không rung, không đổ chuông) để thoả mãn push event của trình duyệt
-    const silentTag = `silent-revoke-${messageId}`;
-    self.registration.showNotification('', {
-      silent: true,
-      body: '',
-      tag: silentTag
-    }).then(() => {
-      // Đóng ngay lập tức để không hiển thị trên màn hình
+  if (msgTypeUpper === 'REVOKE_MESSAGE') {
+    if (messageId) {
+      // 1. Âm thầm xoá thông báo cũ hoặc lọc bỏ tin nhắn bị thu hồi khỏi nhóm thông báo
       self.registration.getNotifications().then((notifications) => {
         notifications.forEach((notification) => {
-          if (notification.tag === silentTag) {
+          if (notification.data && Array.isArray(notification.data.messages)) {
+            const hasMessage = notification.data.messages.some(m => String(m.messageId) === String(messageId));
+            if (hasMessage) {
+              const updatedMessages = notification.data.messages.filter(m => String(m.messageId) !== String(messageId));
+              notification.close(); // Đóng thông báo hiện tại
+              
+              if (updatedMessages.length > 0) {
+                // Nếu vẫn còn tin nhắn khác trong nhóm, cập nhật thông báo mới (không rung/âm thanh để tránh phiền)
+                const count = updatedMessages.length;
+                let originalTitle = notification.title;
+                const titleMatch = originalTitle.match(/^(.*?)\s*\(\d+\)$/);
+                if (titleMatch) {
+                  originalTitle = titleMatch[1];
+                }
+                const finalTitle = count > 1 ? `${originalTitle} (${count})` : originalTitle;
+                const finalBody = updatedMessages.slice(-3).map(m => m.body).join('\n');
+                
+                self.registration.showNotification(finalTitle, {
+                  body: finalBody,
+                  icon: notification.icon,
+                  badge: notification.badge,
+                  tag: notification.tag,
+                  silent: true,
+                  data: {
+                    ...notification.data,
+                    messages: updatedMessages
+                  }
+                });
+              }
+            }
+          } else if (notification.tag === messageId) {
             notification.close();
           }
         });
       });
-    });
-    return; // Dừng lại, không hiển thị thêm thông báo nào khác
+
+      // 2. Tạo thông báo trống hoàn toàn im lặng (không rung, không đổ chuông) để thoả mãn push event của trình duyệt
+      const silentTag = `silent-revoke-${messageId}`;
+      self.registration.showNotification('', {
+        silent: true,
+        body: '',
+        tag: silentTag
+      }).then(() => {
+        // Đóng ngay lập tức để không hiển thị trên màn hình
+        self.registration.getNotifications().then((notifications) => {
+          notifications.forEach((notification) => {
+            if (notification.tag === silentTag) {
+              notification.close();
+            }
+          });
+        });
+      });
+    } else {
+      // Nếu không có messageId, vẫn hiển thị thông báo rỗng ẩn để thoả mãn trình duyệt
+      const silentTag = `silent-revoke-empty-${Date.now()}`;
+      self.registration.showNotification('', {
+        silent: true,
+        body: '',
+        tag: silentTag
+      }).then(() => {
+        self.registration.getNotifications().then((notifications) => {
+          notifications.forEach((notification) => {
+            if (notification.tag === silentTag) {
+              notification.close();
+            }
+          });
+        });
+      });
+    }
+    return; // Luôn return để tránh trôi xuống dưới gộp nhóm hiển thị thành tin nhắn mới
   }
 
   // Kiểm tra xem cuộc trò chuyện có đang hoạt động hay không

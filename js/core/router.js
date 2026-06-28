@@ -132,6 +132,13 @@ class Router {
     let token = sessionStorage.getItem('chat_access_token');
     const profileCompleted = localStorage.getItem('chat_profile_completed') === 'true';
 
+    const localUserId = localStorage.getItem('chat_user_id');
+    if (localUserId) {
+      import('./firebase.js').then(({ syncUserIdToServiceWorker }) => {
+        syncUserIdToServiceWorker(localUserId);
+      }).catch(err => console.warn('Lỗi đồng bộ khởi tạo userId:', err));
+    }
+
     // Silent token refresh if no token in session but remember me is active
     if (!token && localStorage.getItem('chat_remember_me') === 'true') {
       try {
@@ -423,6 +430,12 @@ class Router {
             socket.disconnect();
           } catch (e) {
             console.warn('[Router] Không thể ngắt kết nối WebSocket:', e);
+          }
+          try {
+            const { syncUserIdToServiceWorker } = await import('./firebase.js');
+            syncUserIdToServiceWorker(null);
+          } catch (e) {
+            console.warn('Lỗi xóa đồng bộ userId khi logout:', e);
           }
           localStorage.clear();
           sessionStorage.clear();

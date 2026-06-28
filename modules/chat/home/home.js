@@ -721,7 +721,8 @@ export const HomeView = {
       .then(({ initForegroundNotificationListener, showNativeNotification }) => {
         initForegroundNotificationListener(async (payload) => {
           // Bỏ qua các sự kiện thu hồi tin nhắn ở foreground để WebSocket tự xử lý giao diện
-          if (payload.data?.messageType === 'REVOKE_MESSAGE') {
+          const msgTypeUpper = payload.data?.messageType ? String(payload.data.messageType).toUpperCase() : '';
+          if (msgTypeUpper === 'REVOKE_MESSAGE') {
             return;
           }
 
