@@ -2,6 +2,15 @@ import { CONFIG } from '/js/core/config.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { getMessaging, onBackgroundMessage } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-sw.js';
 
+// Ép buộc Service Worker mới kích hoạt ngay lập tức khi phát hiện thay đổi
+self.addEventListener('install', (event) => {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
 // Khởi tạo Firebase App
 const app = initializeApp(CONFIG.FIREBASE_CONFIG);
 const messaging = getMessaging(app);
@@ -204,7 +213,7 @@ onBackgroundMessage(messaging, async (payload) => {
 
   const messageId = dataSource.messageId;
   const messageType = dataSource.messageType;
-  const conversationId = dataSource.conversationId || dataSource.id;
+  const conversationId = dataSource.conversationId || dataSource.id || dataSource.tag || (payload.notification && payload.notification.tag);
   const msgTypeUpper = messageType ? String(messageType).toUpperCase() : '';
 
   // Lọc trùng tin nhắn
