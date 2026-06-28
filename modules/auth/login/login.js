@@ -95,6 +95,9 @@ export const LoginView = {
         const originalText = loadingText ? loadingText.textContent : t('connecting');
 
         try {
+          sessionStorage.removeItem('chat_access_token');
+          sessionStorage.removeItem('chat_auth_token');
+          sessionStorage.removeItem('chat_firebase_token');
           if (loadingText) loadingText.textContent = t('connecting_google');
 
           // 1. Đăng nhập Google qua Firebase
@@ -279,6 +282,9 @@ export const LoginView = {
       const password = document.getElementById('login-password').value;
       const rememberMe = document.getElementById('login-remember').checked;
 
+      sessionStorage.removeItem('chat_access_token');
+      sessionStorage.removeItem('chat_auth_token');
+      sessionStorage.removeItem('chat_firebase_token');
       loading.classList.add('active');
       const loadingText = loading.querySelector('.loading-text');
       const originalText = loadingText ? loadingText.textContent : t('connecting');
