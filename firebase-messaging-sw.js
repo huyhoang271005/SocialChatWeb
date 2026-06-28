@@ -47,164 +47,6 @@ async function isConversationActive(conversationId) {
   return false;
 }
 
-// Lấy userId hiện tại được đồng bộ từ client qua Cache Storage
-async function getCachedUserId() {
-  try {
-    const cache = await caches.open('user-metadata');
-    const response = await cache.match('/user-id');
-    if (response) {
-      return await response.text();
-    }
-  } catch (e) {
-    console.error('Lỗi khi lấy userId từ cache:', e);
-  }
-  return null;
-}
-
-// Lấy danh sách cuộc trò chuyện được đồng bộ từ client qua Cache Storage
-async function getCachedConversations() {
-  try {
-    const cache = await caches.open('chat-metadata');
-    const response = await cache.match('/conversations');
-    if (response) {
-      const text = await response.text();
-      return JSON.parse(text);
-    }
-  } catch (e) {
-    console.error('Lỗi khi lấy danh sách cuộc trò chuyện từ cache:', e);
-  }
-  return [];
-}
-
-// Hàm chuyển đổi Blob thành Data URL (Base64)
-function blobToDataURL(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
-
-// Tải một ảnh thành ImageBitmap, xử lý lỗi và CORS
-async function loadImage(url) {
-  try {
-    const response = await fetch(url, { mode: 'cors' });
-    if (!response.ok) throw new Error('Fetch failed');
-    const blob = await response.blob();
-    return await createImageBitmap(blob);
-  } catch (e) {
-    try {
-      const defaultUserAvatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&h=100';
-      const response = await fetch(defaultUserAvatar, { mode: 'cors' });
-      const blob = await response.blob();
-      return await createImageBitmap(blob);
-    } catch (err) {
-      return null;
-    }
-  }
-}
-
-// Vẽ ảnh gộp (composite avatar) sử dụng OffscreenCanvas
-async function generateCompositeAvatar(avatarUrls) {
-  if (!avatarUrls || avatarUrls.length === 0) return null;
-  
-  const canvasSize = 120; // Kích thước icon chuẩn cho push notification
-  const canvas = new OffscreenCanvas(canvasSize, canvasSize);
-  const ctx = canvas.getContext('2d');
-  
-  // Tải song song tất cả các ảnh đại diện thành ImageBitmap
-  const imagePromises = avatarUrls.slice(0, 4).map(url => loadImage(url));
-  const images = (await Promise.all(imagePromises)).filter(img => img !== null);
-  
-  if (images.length === 0) return null;
-  
-  // Xóa nền
-  ctx.clearRect(0, 0, canvasSize, canvasSize);
-  
-  // Bo tròn khung viền Canvas để hiển thị dạng hình tròn đẹp mắt
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(canvasSize / 2, canvasSize / 2, canvasSize / 2, 0, Math.PI * 2);
-  ctx.clip();
-  
-  const count = images.length;
-  
-  if (count === 1) {
-    // 1 ảnh: Vẽ toàn bộ canvas
-    ctx.drawImage(images[0], 0, 0, canvasSize, canvasSize);
-  } else if (count === 2) {
-    // 2 ảnh: Chia đôi dọc (Trái - Phải)
-    const w = canvasSize / 2;
-    // Ảnh 1 (trái)
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(0, 0, w - 1, canvasSize);
-    ctx.clip();
-    ctx.drawImage(images[0], -w/2, 0, canvasSize, canvasSize);
-    ctx.restore();
-    
-    // Ảnh 2 (phải)
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(w + 1, 0, w, canvasSize);
-    ctx.clip();
-    ctx.drawImage(images[1], w - w/2, 0, canvasSize, canvasSize);
-    ctx.restore();
-  } else if (count === 3) {
-    // 3 ảnh: Trái chiếm 1/2 dọc. Phải chia 2 ngang (Trên - Dưới)
-    const w = canvasSize / 2;
-    const h = canvasSize / 2;
-    
-    // Ảnh 1 (trái)
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(0, 0, w - 1, canvasSize);
-    ctx.clip();
-    ctx.drawImage(images[0], -w/2, 0, canvasSize, canvasSize);
-    ctx.restore();
-    
-    // Ảnh 2 (trên phải)
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(w + 1, 0, w, h - 1);
-    ctx.clip();
-    ctx.drawImage(images[1], w, 0, w, h);
-    ctx.restore();
-    
-    // Ảnh 3 (dưới phải)
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(w + 1, h + 1, w, h);
-    ctx.clip();
-    ctx.drawImage(images[2], w, h, w, h);
-    ctx.restore();
-  } else {
-    // 4 ảnh trở lên: Chia làm 4 góc 2x2
-    const w = canvasSize / 2;
-    const h = canvasSize / 2;
-    
-    // Top Left
-    ctx.drawImage(images[0], 0, 0, w - 1, h - 1);
-    // Top Right
-    ctx.drawImage(images[1], w + 1, 0, w, h - 1);
-    // Bottom Left
-    ctx.drawImage(images[2], 0, h + 1, w - 1, h);
-    // Bottom Right
-    ctx.drawImage(images[3], w + 1, h + 1, w, h);
-  }
-  
-  ctx.restore();
-  
-  try {
-    const blob = await canvas.convertToBlob({ type: 'image/png' });
-    return await blobToDataURL(blob);
-  } catch (e) {
-    console.error('Lỗi khi convert canvas thành blob/dataUrl:', e);
-    return null;
-  }
-}
-
 // Xử lý thông báo đẩy khi ứng dụng chạy ẩn hoặc đã đóng
 onBackgroundMessage(messaging, async (payload) => {
   // 2. GIẢI PHÁP AN TOÀN: Kiểm tra xem data nằm ở bọc nào để bốc cho trúng
@@ -420,67 +262,15 @@ onBackgroundMessage(messaging, async (payload) => {
     finalBody = recentMessages.map(m => m.body).join('\n');
   }
 
-  let customIcon = dataSource.icon || (payload.notification && payload.notification.icon);
+  let customIcon = dataSource.icon || (payload.notification && payload.notification.icon) || null;
 
-  const isDefaultIcon = !customIcon || 
-                        customIcon === '/favicon.ico' || 
-                        customIcon.includes('1582213782179') || 
-                        customIcon.includes('1535713875002');
-
-  if (isDefaultIcon) {
-    try {
-      const conversations = await getCachedConversations();
-      const convo = conversations.find(c => String(c.conversationId) === String(conversationId));
-      if (convo) {
-        // Kiểm tra xem cuộc trò chuyện có avatar tùy chỉnh thực sự không (không phải ảnh mặc định)
-        const hasCustomAvatar = convo.conversationAvatarUrl && 
-                                !convo.conversationAvatarUrl.includes('1582213782179') && 
-                                !convo.conversationAvatarUrl.includes('1535713875002');
-                                
-        if (hasCustomAvatar) {
-          customIcon = convo.conversationAvatarUrl;
-        } else if (convo.group) {
-          // Xử lý ảnh gộp: Vẽ động ảnh gộp bằng OffscreenCanvas giống như giao diện
-          const members = [...(convo.userConversations || [])];
-          // Sắp xếp các thành viên theo chiều giảm dần của joinAt hoặc createdAt như ở client
-          members.sort((a, b) => {
-            const timeA = new Date(a.joinAt || a.createdAt || 0).getTime();
-            const timeB = new Date(b.joinAt || b.createdAt || 0).getTime();
-            return timeB - timeA;
-          });
-          
-          const defaultUserAvatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&h=100';
-          const avatarUrls = members.map(u => u.avatarUrl || u.user?.avatarUrl || defaultUserAvatar);
-          
-          if (avatarUrls.length > 0) {
-            const compositeUrl = await generateCompositeAvatar(avatarUrls);
-            if (compositeUrl) {
-              customIcon = compositeUrl;
-            } else {
-              customIcon = avatarUrls[0];
-            }
-          }
-        } else {
-          // Chat 1-1: Lấy avatar của đối phương
-          const currentUserId = await getCachedUserId();
-          const otherParticipant = convo.userConversations?.find(u => String(u.userId) !== String(currentUserId));
-          if (otherParticipant) {
-            customIcon = otherParticipant.avatarUrl || otherParticipant.user?.avatarUrl;
-          }
-        }
-      }
-    } catch (err) {
-      console.warn('Lỗi khi tìm avatar cuộc trò chuyện từ cache:', err);
-    }
-  }
-
-  if (!customIcon) {
-    customIcon = '/favicon.ico';
+  // Lọc bỏ các icon mặc định (Unsplash hoặc favicon) để không hiển thị nếu server trả về null hoặc ảnh mặc định
+  if (customIcon && (customIcon.includes('1582213782179') || customIcon.includes('1535713875002') || customIcon === '/favicon.ico')) {
+    customIcon = null;
   }
 
   const notificationOptions = {
     body: finalBody,
-    icon: customIcon, // Bốc trường "icon" chính là avatar phòng chat từ Java hoặc notification payload truyền sang
     badge: '/favicon.ico',
     tag: groupTag,
     data: {
@@ -488,6 +278,10 @@ onBackgroundMessage(messaging, async (payload) => {
       messages: messages
     }
   };
+
+  if (customIcon) {
+    notificationOptions.icon = customIcon;
+  }
 
   // Ra lệnh hiển thị thông báo
   await self.registration.showNotification(finalTitle, notificationOptions);
