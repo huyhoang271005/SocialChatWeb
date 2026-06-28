@@ -136,7 +136,7 @@ class Router {
     if (!token && localStorage.getItem('chat_remember_me') === 'true') {
       try {
         const { api } = await import('./api.js');
-        const refreshResponse = await api.get('auth/refresh-token');
+        const refreshResponse = await api.post('auth/refresh-token');
         if (refreshResponse) {
           token = (refreshResponse.data && (refreshResponse.data.accessToken || refreshResponse.data.token)) ||
             refreshResponse.accessToken || refreshResponse.token;

@@ -168,7 +168,6 @@ export async function showNativeNotification(title, body, conversationId, messag
   if (messageId) {
     const msgIdStr = String(messageId);
     if (processedMessageIds.has(msgIdStr)) {
-      console.log(`[FCM/WS] Bỏ qua hiển thị trùng lặp cho tin nhắn: ${msgIdStr}`);
       return;
     }
     processedMessageIds.add(msgIdStr);

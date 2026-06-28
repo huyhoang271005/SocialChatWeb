@@ -5,13 +5,13 @@ import { getLanguage, t } from './i18n.js';
 function handleApiResponse(responseJson) {
   if (responseJson && typeof responseJson === 'object') {
     // Auto save accessToken or token to sessionStorage if present
-    const token = (responseJson.data && (responseJson.data.accessToken || responseJson.data.token)) ||
-                  responseJson.accessToken || 
-                  responseJson.token;
+    let token = null;
+    if (responseJson.data) {
+      token = responseJson.data.accessToken;
+    }
 
     if (token) {
       sessionStorage.setItem('chat_access_token', token);
-      sessionStorage.setItem('chat_auth_token', token);
     }
 
     return responseJson;
@@ -55,7 +55,7 @@ export async function refreshAccessToken() {
     const { showDialog } = await import('../shared/dialog/dialog.js');
 
     const res = await fetch(`${CONFIG.API_BASE_URL}/auth/refresh-token`, {
-      method: "GET",
+      method: "POST",
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
@@ -73,6 +73,13 @@ export async function refreshAccessToken() {
     if (res.status === 401) {
       localStorage.setItem('chat_remember_me', 'false');
       sessionStorage.clear();
+
+      try {
+        const { socket } = await import('./websocket.js');
+        socket.disconnect();
+      } catch (e) {
+        console.warn('[API] Không thể ngắt kết nối WebSocket khi hết hạn phiên:', e);
+      }
 
       const serverMsg = body && body.message ? formatDateTimeInText(body.message) : null;
       const displayMsg = serverMsg || t('api_session_expired_desc');
@@ -127,16 +134,12 @@ export async function refreshAccessToken() {
     }
 
     const token = body.data;
-    const newAccessToken = (token && (token.accessToken || token.token)) || body.accessToken || body.token;
-    const firebaseToken = (token && token.firebaseToken) || body.firebaseToken;
-    const userId = (token && token.userId) || body.userId;
+    const newAccessToken = token?.accessToken;
+    const firebaseToken = token?.firebaseToken;
+    const userId = token?.userId;
 
     if (newAccessToken) {
       sessionStorage.setItem('chat_access_token', newAccessToken);
-      sessionStorage.setItem('chat_auth_token', newAccessToken);
-    }
-    if (firebaseToken) {
-      sessionStorage.setItem('chat_firebase_token', firebaseToken);
     }
     if (userId) {
       localStorage.setItem('chat_user_id', userId);

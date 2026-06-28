@@ -52,7 +52,6 @@ onBackgroundMessage(messaging, async (payload) => {
   if (messageId) {
     const msgIdStr = String(messageId);
     if (processedBackgroundMessageIds.has(msgIdStr)) {
-      console.log('Bỏ qua tin nhắn trùng lặp trong background:', msgIdStr);
       return;
     }
     processedBackgroundMessageIds.add(msgIdStr);

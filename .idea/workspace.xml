@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="70a16e7e-4c5f-4335-91a1-c3a4263fefce" name="Changes" comment="feat: add maintenance mode page with automated retry functionality and associated home module stub" />
+    <list default="true" id="70a16e7e-4c5f-4335-91a1-c3a4263fefce" name="Changes" comment="feat: add maintenance mode page with automated retry functionality and associated home module stub">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/js/core/api.js" beforeDir="false" afterPath="$PROJECT_DIR$/js/core/api.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/js/core/websocket.js" beforeDir="false" afterPath="$PROJECT_DIR$/js/core/websocket.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modules/auth/login/login.js" beforeDir="false" afterPath="$PROJECT_DIR$/modules/auth/login/login.js" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -100,6 +105,7 @@
       <workItem from="1782238560861" duration="1003000" />
       <workItem from="1782311706301" duration="3890000" />
       <workItem from="1782555368057" duration="3384000" />
+      <workItem from="1782658656148" duration="3123000" />
     </task>
     <task id="LOCAL-00001" summary="feat: implement modular app architecture with responsive sidebar navigation and core services integration">
       <option name="closed" value="true" />

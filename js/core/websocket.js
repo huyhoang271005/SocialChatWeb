@@ -28,6 +28,7 @@ class WebSocketManager {
     this.subscriptionsMap = new Map(); // Lưu đối tượng subscription của STOMP: conversationId -> STOMP subscription
     this.onConnectCallback = null;
     this.onDisconnectCallback = null;
+    this.currentToken = null; // Theo dõi token hiện tại của kết nối
   }
 
   // Tương thích ngược với code cũ kiểm tra socket.ws.readyState trong home.js
@@ -50,12 +51,24 @@ class WebSocketManager {
       return;
     }
 
-    // Tránh kết nối khi đang refresh token hoặc đang kết nối trùng lặp
-    if (this.isRefreshingToken || this.isConnecting || (this.client && this.client.connected)) {
+    let token = sessionStorage.getItem('chat_access_token');
+    if (token === 'null' || token === 'undefined') {
+      token = null;
+    }
+
+    // Nếu token hiện tại khác với token đã kết nối trước đó (ví dụ đăng nhập tài khoản khác)
+    // thì ta bắt buộc phải ngắt kết nối WebSocket cũ để đảm bảo kết nối mới dùng đúng token/topic mới
+    if (this.client && this.currentToken !== token) {
+      this.disconnect();
+    }
+
+    // Tránh kết nối trùng lặp
+    if (this.isConnecting || (this.client && this.client.connected)) {
       return;
     }
 
     this.isConnecting = true;
+    this.currentToken = token;
 
     // Nếu đã tồn tại client cũ, dọn dẹp trước khi tạo mới
     if (this.client) {
@@ -64,11 +77,6 @@ class WebSocketManager {
       } catch (e) {
       }
       this.client = null;
-    }
-
-    let token = sessionStorage.getItem('chat_access_token');
-    if (token === 'null' || token === 'undefined') {
-      token = null;
     }
 
     // Không đổi http sang ws, sử dụng SockJS
@@ -88,37 +96,18 @@ class WebSocketManager {
       heartbeatOutgoing: 4000
     });
 
-    // Helper đợi refresh token hoàn tất
-    const waitForTokenRefresh = () => {
-      return new Promise((resolve) => {
-        const check = () => {
-          if (!this.isRefreshingToken) {
-            resolve();
-          } else {
-            setTimeout(check, 100);
-          }
-        };
-        check();
-      });
-    };
-
     // Lấy token mới nhất trước mỗi lượt kết nối lại
     this.client.beforeConnect = async () => {
-      if (this.isRefreshingToken) {
-        console.log('WebSocket beforeConnect: Đang chờ refresh token hoàn tất...');
-        await waitForTokenRefresh();
-      }
-
       let freshToken = sessionStorage.getItem('chat_access_token');
       if (freshToken === 'null' || freshToken === 'undefined') {
         freshToken = null;
       }
+      this.currentToken = freshToken;
 
       if (freshToken) {
         this.client.connectHeaders = {
           Authorization: `Bearer ${freshToken}`
         };
-        console.log('WebSocket beforeConnect: Đã cập nhật token mới vào headers kết nối.');
       } else {
         this.client.connectHeaders = {};
       }
@@ -150,41 +139,21 @@ class WebSocketManager {
     };
 
     this.client.onStompError = async (frame) => {
+      // Xử lý hết hạn hoặc lỗi token khi server trả về có chữ UNAUTHORIZED
       const errorMsg = frame.headers['message'] || '';
       const errorBody = frame.body || '';
-      console.warn('STOMP error frame received:', errorMsg, errorBody);
       const isTokenExpiredOrInvalid =
-        (typeof errorMsg === 'string' && errorMsg.toUpperCase().includes('UNAUTHORIZED')) ||
-        (typeof errorBody === 'string' && errorBody.toUpperCase().includes('UNAUTHORIZED'));
+        (typeof errorMsg === 'string' && errorMsg.includes('UNAUTHORIZED')) ||
+        (typeof errorBody === 'string' && errorBody.includes('UNAUTHORIZED'));
 
       if (isTokenExpiredOrInvalid) {
         await this.handleTokenExpired();
       }
     };
 
-    this.client.onWebSocketError = async (evt) => {
-      console.warn('STOMP WebSocket error observed:', evt);
-      const errMsg = (evt && evt.message) || '';
-      if (typeof errMsg === 'string' && errMsg.toUpperCase().includes('UNAUTHORIZED')) {
-        await this.handleTokenExpired();
-      }
-    };
-
-    this.client.onWebSocketClose = async (evt) => {
+    this.client.onWebSocketClose = () => {
       this.isConnecting = false;
       this.subscriptionsMap.clear();
-
-      const reason = (evt && evt.reason) || '';
-      const errMsg = (evt && evt.message) || '';
-      const isUnauthorized =
-        (typeof reason === 'string' && reason.toUpperCase().includes('UNAUTHORIZED')) ||
-        (typeof errMsg === 'string' && errMsg.toUpperCase().includes('UNAUTHORIZED')) ||
-        evt?.code === 4001 || evt?.code === 4401;
-
-      if (isUnauthorized) {
-        await this.handleTokenExpired();
-      }
-
       if (this.onDisconnectCallback) {
         try {
           this.onDisconnectCallback();
@@ -205,21 +174,19 @@ class WebSocketManager {
       return;
     }
     this.isRefreshingToken = true;
-    console.warn('WebSocket phát hiện lỗi UNAUTHORIZED. Đang ngắt kết nối cũ và chuẩn bị refresh token...');
     this.disconnect();
     try {
       const res = await handleTokenRefresh();
       if (res && res.success) {
-        console.log('Refresh token thành công. Đang kết nối lại WebSocket...');
         await this.connect();
       } else {
-        console.warn('Refresh token thất bại, huỷ kết nối WebSocket và yêu cầu đăng nhập lại.');
+        console.warn('Refresh token failed, stopping websocket connection.');
         sessionStorage.clear();
         localStorage.clear();
         window.location.hash = '#login';
       }
     } catch (error) {
-      console.error('Lỗi khi tiến hành refresh token từ WebSocket:', error);
+      console.error('Error during token refresh in websocket:', error);
       sessionStorage.clear();
       localStorage.clear();
       window.location.hash = '#login';
@@ -232,11 +199,17 @@ class WebSocketManager {
    * Đóng kết nối STOMP một cách chủ động
    */
   disconnect() {
+    this.isConnecting = false;
+    this.currentToken = null;
+    this.activeSubscriptions.clear(); // Xóa sạch danh sách subscribe cũ để tránh đăng ký nhầm sau khi đổi tài khoản
     if (this.client) {
-      this.client.deactivate();
+      try {
+        this.client.deactivate();
+      } catch (e) {
+      }
       this.client = null;
-      this.subscriptionsMap.clear();
     }
+    this.subscriptionsMap.clear();
   }
 
   /**
